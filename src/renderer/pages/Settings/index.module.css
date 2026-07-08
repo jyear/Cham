@@ -1,0 +1,8 @@
+.container{
+    width: 700px;
+    margin: 0 auto;
+    background: var(--bg-tertiary);
+    padding: 20px;
+    border-radius: 6px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}

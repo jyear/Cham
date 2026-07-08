@@ -1,0 +1,107 @@
+const zh = {
+  // TitleBar
+  settings: '设置',
+  back: '返回',
+
+  // SourcePanel
+  source: '源文件',
+  filesCount: (n: number) => `${n} 个文件`,
+  noFilesSelected: '未选择文件',
+  addFolder: '添加文件夹',
+  addFiles: '添加文件...',
+  clearAll: '清空',
+  copyBadge: '复制',
+
+  // ConfigPanel
+  config: '配置',
+  quality: '清晰度',
+  smallerFile: '更小体积',
+  betterQuality: '更高质量',
+  format: '格式',
+  keepExtension: '保持原始后缀',
+  keepExtensionHintWebp: '输出原始后缀而非 .webp',
+  copyOtherTypes: '复制其他文件类型',
+  copyOtherTypesHint: '将不可转换的文件直接复制到输出目录',
+  watchMode: '观察模式',
+  watchModeHint: '监听文件夹内文件变动并自动转换',
+  watchModeNoFolder: '请先选择源文件夹和输出文件夹',
+  watchModeLockOutput: '观察模式下不可更改输出文件夹',
+  convert: '开始转换',
+  convertAgain: '再次转换',
+  converting: '转换中...',
+  convertingProgress: (done: number, total: number) => `转换中... ${done}/${total}`,
+  selectOutputFolder: '请选择输出文件夹',
+
+  // OutputPanel
+  output: '输出',
+  okCount: (ok: number, fail: number) => `${ok} 成功${fail > 0 ? ` · ${fail} 失败` : ''}`,
+  readyToConvert: '等待转换',
+  allUpToDate: '所有文件已是最新，无需重新转换',
+  processing: '处理中...',
+  cached: '已缓存',
+  copied: '已复制',
+  ok: '成功',
+  failed: '失败',
+
+  // Footer
+  footer: '基于 sharp 构建 · 源自 cham-cli',
+
+  // Settings page
+  settingsTitle: '设置',
+  settingsDesc: '语言 / Language',
+  theme: '主题',
+  language: '语言',
+  currentVersion: (v: string) => `当前版本: ${v}`,
+  clearCache: '清空缓存',
+  cacheCleared: '缓存已清空',
+  checkUpdate: '检查更新',
+  checkingUpdate: '检查中...',
+  updateAvailableBanner: '发现新版本',
+  updateAvailable: (v: string) => `发现新版本 v ${v}！`,
+  updateUpToDate: (v: string) => `已是最新版本 (${v})`,
+  updateChangelog: '更新日志',
+  updateDownloadNow: '立即下载',
+  updateDownloadingProgress: (p: number) => `下载中... ${p}%`,
+  updateInstallNow: '立即更新',
+  updateError: (e: string) => `更新失败: ${e}`,
+
+  // About page
+  aboutTitle: '关于 Cham',
+  aboutDesc: '一款基于 Electron、React 和 TypeScript 构建的桌面图像压缩与 WebP 转换工具。',
+  aboutBullet1: '支持 PNG / JPG / JPEG / GIF / TIFF / BMP 转换为 WebP',
+  aboutBullet2: '使用 sharp 实现高性能图像处理',
+  aboutBullet3: '基于 cham-cli 命令行工具',
+
+  // Format options
+  formatOptions: '格式选项',
+  optLossless: '无损压缩',
+  optLosslessDesc: '使用无损压缩模式',
+  optNearLossless: '近无损压缩',
+  optNearLosslessDesc: '使用近无损压缩模式',
+  optAlphaQuality: 'Alpha 质量',
+  optAlphaQualityDesc: 'Alpha 层质量，整数 0-100',
+  optEffort: 'CPU 占用',
+  optEffortDesc: 'CPU 占用率，0（最快）到 6（最慢）',
+  optPreset: '预设',
+  optPresetDesc: '预处理/过滤预设',
+  optSmartSubsample: '智能二次采样',
+  optSmartSubsampleDesc: '使用高质量的色度二次采样',
+  optSmartDeblock: '智能去块',
+  optSmartDeblockDesc: '自动调整去块滤镜改善低对比度边缘（较慢）',
+  optMinSize: '最小体积',
+  optMinSizeDesc: '禁用动画关键帧以减小文件体积（较慢）',
+  optLoop: '循环次数',
+  optLoopDesc: '动画循环次数，0 表示无限循环',
+  optMixed: '混合模式',
+  optMixedDesc: '允许混合有损和无损动画帧（较慢）',
+  optExact: '精确颜色',
+  optExactDesc: '保留透明像素中的颜色数据',
+
+  // Misc
+  minimize: '最小化',
+  maximize: '最大化',
+  restore: '还原',
+  close: '关闭',
+};
+
+export default zh;

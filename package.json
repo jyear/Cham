@@ -1,0 +1,96 @@
+{
+  "name": "cham",
+  "version": "0.0.1",
+  "description": "Cham - Desktop image converter (WebP/AVIF)",
+  "main": "dist/main/index.js",
+  "scripts": {
+    "build:main": "webpack --mode production --config webpack.main.config.js",
+    "build:renderer": "webpack --mode production --config webpack.renderer.config.js",
+    "build:web": "webpack --mode production --config webpack.web.config.js",
+    "build": "pnpm run build:main && pnpm run build:renderer",
+    "start": "pnpm run build && electron .",
+    "dev:renderer": "webpack serve --mode development --config webpack.renderer.config.js",
+    "dev:main": "webpack --watch --mode development --config webpack.main.config.js",
+    "dev:web": "webpack serve --mode development --config webpack.web.config.js",
+    "dev:electron": "wait-on http://localhost:9000 && node dev-launcher.js",
+    "postinstall": "npx electron-rebuild -f -w better-sqlite3",
+    "dev": "concurrently -n renderer,main,electron -c blue,green,yellow \"pnpm dev:renderer\" \"pnpm dev:main\" \"pnpm dev:electron\"",
+    "pack": "pnpm run build && electron-builder --dir",
+    "dist": "pnpm run build && electron-builder"
+  },
+  "keywords": [
+    "webp",
+    "image",
+    "compression",
+    "electron"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@electron/rebuild": "^4.1.0",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "concurrently": "^10.0.3",
+    "css-loader": "^6.8.0",
+    "electron": "^28.0.0",
+    "electron-builder": "^26.15.3",
+    "html-webpack-plugin": "^5.5.0",
+    "style-loader": "^3.3.0",
+    "ts-loader": "^9.5.0",
+    "typescript": "^5.3.0",
+    "wait-on": "^9.0.10",
+    "webpack": "^5.89.0",
+    "webpack-cli": "^5.1.0",
+    "webpack-dev-server": "^6.0.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "electron",
+      "sharp",
+      "better-sqlite3"
+    ]
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.11.1",
+    "chokidar": "^3.6.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^7.18.1",
+    "sharp": "^0.34.2"
+  },
+  "build": {
+    "appId": "com.luanzz.cham",
+    "productName": "Cham",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "node_modules/**/*",
+      "!node_modules/.cache",
+      "!node_modules/**/*.md",
+      "!node_modules/**/*.ts",
+      "!node_modules/**/*.map"
+    ],
+    "extraResources": [],
+    "artifactName": "${productName}-Setup-${version}.${ext}",
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "${productName}-Setup-${version}.${ext}"
+    },
+    "mac": {
+      "target": "dmg",
+      "artifactName": "${productName}-${version}.${ext}"
+    },
+    "linux": {
+      "target": "AppImage",
+      "artifactName": "${productName}-${version}.${ext}"
+    }
+  }
+}

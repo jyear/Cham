@@ -1,0 +1,257 @@
+.bar {
+  display: flex;
+  align-items: center;
+  height: 36px;
+  background: var(--bg-secondary);
+  margin: 0 -20px;
+  padding: 0 8px;
+  flex-shrink: 0;
+}
+
+.drag {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+  -webkit-app-region: drag;
+  padding-left: 8px;
+}
+
+.icon {
+  font-size: 16px;
+  color: var(--primary);
+  line-height: 1;
+}
+
+.appTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: -0.3px;
+}
+
+.controls {
+  display: flex;
+  height: 100%;
+  -webkit-app-region: no-drag;
+}
+
+.ctrlBtn {
+  width: 44px;
+  height: 100%;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition);
+  border-radius: 0;
+  outline: none;
+}
+.ctrlBtn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text);
+}
+.ctrlBtnClose:hover {
+  background: #e81123;
+  color: #fff;
+}
+
+/* Update badge in title bar */
+.updateBadge {
+  width: auto;
+  padding: 0 10px;
+  gap: 6px;
+  color: var(--primary);
+}
+.updateBadge:hover {
+  color: var(--primary);
+}
+
+.updateBadgeText {
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Update modal body */
+.updateBody {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.aboutVersionRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.aboutVersionLabel {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.aboutCheckBtn {
+  padding: 6px 14px;
+  border-radius: 5px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 60px;
+}
+.aboutCheckBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.spinIcon {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.updateMsg {
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.updateNote {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.downloadUrlRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  background: var(--bg-tertiary);
+  border-radius: 6px;
+}
+
+.downloadUrlLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.downloadUrl {
+  font-size: 11px;
+  color: var(--primary);
+  word-break: break-all;
+  user-select: all;
+}
+
+/* Changelog */
+.changelogSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.changelogTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+
+.changelogList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.changelogEntry {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  background: var(--bg-tertiary);
+  border-radius: 6px;
+}
+
+.changelogVersion {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.changelogNotes {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+/* Download progress */
+.progressSection {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.progressBar {
+  width: 100%;
+  height: 6px;
+  background: var(--bg-tertiary);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 3px;
+  transition: width 0.2s ease;
+}
+
+.progressText {
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+/* Action buttons */
+.actionBtn {
+  width: 100%;
+  padding: 10px 0;
+  border-radius: 6px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.actionBtn:hover {
+  opacity: 0.9;
+}
+.actionBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
