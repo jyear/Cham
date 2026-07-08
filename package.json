@@ -82,14 +82,18 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "artifactName": "${productName}-Setup-${version}.${ext}"
+      "artifactName": "${productName}-Setup-${version}.${ext}",
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico"
     },
     "mac": {
       "target": "dmg",
+      "icon": "assets/icon.png",
       "artifactName": "${productName}-${version}.${ext}"
     },
     "linux": {
       "target": "AppImage",
+      "icon": "assets/icon.png",
       "artifactName": "${productName}-${version}.${ext}"
     }
   }

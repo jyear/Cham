@@ -1,0 +1,122 @@
+/* ===== Features Page ===== */
+.features-page {
+  padding: 120px 0 80px;
+}
+
+.features-title {
+  font-size: 36px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.features-subtitle {
+  font-size: 16px;
+  color: var(--text-secondary);
+  text-align: center;
+  margin-bottom: 48px;
+}
+
+.features-empty {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 15px;
+}
+
+.version-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.version-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+}
+
+.version-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.version-tag {
+  display: inline-block;
+  padding: 3px 10px;
+  background: var(--primary-glow);
+  border: 1px solid rgba(124, 92, 252, 0.3);
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #b8a4ff;
+}
+
+.version-date {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.version-notes {
+  font-size: 15px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+.version-downloads {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.version-dl-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 13px;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.version-dl-btn:hover {
+  border-color: var(--primary);
+}
+
+.version-dl-platform {
+  font-weight: 600;
+}
+
+.version-dl-ext {
+  color: var(--text-secondary);
+}
+
+/* Nav active state */
+.nav-active {
+  color: var(--text) !important;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 560px) {
+  .features-title {
+    font-size: 28px;
+  }
+
+  .version-downloads {
+    flex-direction: column;
+  }
+
+  .version-dl-btn {
+    justify-content: center;
+  }
+}

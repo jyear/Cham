@@ -33,6 +33,7 @@ function createWindow(): void {
     frame: false,
     title: 'Cham - Image Converter',
     backgroundColor: '#0f0f14',
+    icon: path.join(__dirname, '../../assets/icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
