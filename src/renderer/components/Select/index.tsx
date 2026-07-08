@@ -15,6 +15,7 @@ interface Props<T extends string> {
 
 export default function Select<T extends string>({ options, value, onChange }: Props<T>) {
   const [open, setOpen] = useState(false);
+  const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
   const containerRef = useRef<HTMLDivElement>(null);
 
   const selected = options.find((o) => o.value === value);
@@ -32,6 +33,19 @@ export default function Select<T extends string>({ options, value, onChange }: P
     }
   }, [open, handleClickOutside]);
 
+  const handleToggle = () => {
+    if (!open && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      setMenuStyle({
+        position: 'fixed',
+        top: rect.bottom + 4,
+        right: window.innerWidth - rect.right,
+        minWidth: rect.width,
+      });
+    }
+    setOpen((v) => !v);
+  };
+
   const handleSelect = (opt: SelectOption<T>) => {
     onChange(opt.value);
     setOpen(false);
@@ -42,14 +56,14 @@ export default function Select<T extends string>({ options, value, onChange }: P
       <button
         type="button"
         className={`${s.trigger} ${open ? s.triggerOpen : ''}`}
-        onClick={() => setOpen((v) => !v)}
+        onClick={handleToggle}
       >
         <span>{selected?.label ?? value}</span>
         <Icon type="chevron-down" size={10} className={`${s.arrow} ${open ? s.arrowUp : ''}`} />
       </button>
 
       {open && (
-        <div className={s.menu}>
+        <div className={s.menu} style={menuStyle}>
           {options.map((opt) => (
             <button
               key={opt.value}

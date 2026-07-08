@@ -9,6 +9,7 @@ import {
   PLATFORM_ICONS,
   downloadUrl,
 } from '../../data/version';
+import appIcon from '../../../../assets/icon.png';
 import './index.css';
 
 function formatDate(ts: number): string {
@@ -34,7 +35,7 @@ export default function Features() {
         <div className="container">
           <div className="nav-inner">
             <Link to="/" className="logo">
-              <span className="logo-icon">⧉</span>
+              <img className="logo-icon" src={appIcon} alt="Cham" />
               <span className="logo-text">Cham</span>
             </Link>
             <div className="nav-links">
@@ -91,7 +92,7 @@ export default function Features() {
         <div className="container">
           <div className="footer-inner">
             <div className="footer-brand">
-              <span className="logo-icon">⧉</span>
+              <img className="logo-icon" src={appIcon} alt="Cham" />
               <span>Cham</span>
             </div>
             <p className="footer-copy">{t.footer}</p>

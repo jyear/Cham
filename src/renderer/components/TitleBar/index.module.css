@@ -19,9 +19,9 @@
 }
 
 .icon {
-  font-size: 16px;
-  color: var(--primary);
-  line-height: 1;
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
 }
 
 .appTitle {
@@ -75,6 +75,15 @@
   font-size: 11px;
   font-weight: 600;
   white-space: nowrap;
+}
+
+/* About modal logo */
+.aboutLogo {
+  display: block;
+  width: 64px;
+  height: 64px;
+  margin: 40px auto;
+  object-fit: contain;
 }
 
 /* Update modal body */

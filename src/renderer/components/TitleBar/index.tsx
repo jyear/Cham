@@ -3,6 +3,7 @@ import { useT } from '@/i18n';
 import Icon from '@/components/Icon';
 import Modal from '@/components/Modal';
 import Settings from '@/pages/Settings';
+import appIcon from '../../../../assets/icon.png';
 import s from './index.module.css';
 
 interface Props {
@@ -124,7 +125,7 @@ export default function TitleBar({ maximized }: Props) {
     <>
       <div className={s.bar}>
         <div className={s.drag}>
-          <span className={s.icon}>⧉</span>
+          <img className={s.icon} src={appIcon} alt="Cham" />
           <span className={s.appTitle}>Cham</span>
         </div>
         <div className={s.controls}>
@@ -169,6 +170,7 @@ export default function TitleBar({ maximized }: Props) {
         onClose={() => { setAboutOpen(false); setUpdateMsg(''); }}
       >
         <div className={s.updateBody}>
+          <img className={s.aboutLogo} src={appIcon} alt="Cham" />
           <div className={s.aboutVersionRow}>
             <span className={s.aboutVersionLabel}>{t.currentVersion(version)}</span>
             <button className={s.aboutCheckBtn} onClick={handleCheckUpdate} disabled={checking}>
