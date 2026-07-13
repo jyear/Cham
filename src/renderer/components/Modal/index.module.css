@@ -35,7 +35,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 20px 16px;
+  padding: 14px 16px 10px;
   flex-shrink: 0;
 }
 
@@ -64,7 +64,8 @@
 }
 
 .body {
-  padding: 8px 20px 24px;
+  flex: 1;
+  padding: 0 16px 14px;
   overflow-y: auto;
   min-height: 0;
 }

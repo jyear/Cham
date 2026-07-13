@@ -1,8 +1,20 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import { useT, type Lang } from "@/i18n";
 import { useTheme, type Theme } from "@/i18n/useTheme";
+import { useBackground } from "@/hooks/useBackground";
 import Select from "@/components/Select";
+import Switch from "@/components/Switch";
+import Icon from "@/components/Icon";
 import Toast from "@/components/Toast";
+import s from "./index.module.css";
+
+type NavKey = "basic" | "appearance";
+
+interface NavItem {
+  key: NavKey;
+  icon: "settings" | "wrench";
+  label: string;
+}
 
 const btnSmall = {
   padding: "5px 12px",
@@ -19,7 +31,21 @@ const btnSmall = {
 export default function Settings() {
   const { t, lang, setLang } = useT();
   const { theme, setTheme } = useTheme();
+  const {
+    items,
+    enabled,
+    setEnabled,
+    selectBackground,
+    setActiveBackground,
+    deleteBackground,
+  } = useBackground();
+  const [activeNav, setActiveNav] = useState<NavKey>("basic");
   const [toast, setToast] = useState({ visible: false, message: "" });
+
+  // Refs for scroll-spy
+  const basicRef = useRef<HTMLDivElement>(null);
+  const appearanceRef = useRef<HTMLDivElement>(null);
+  const scrollingByClick = useRef(false);
 
   const showToast = useCallback((message: string) => {
     setToast({ visible: true, message });
@@ -42,62 +68,148 @@ export default function Settings() {
     }
   };
 
+  const navItems: NavItem[] = [
+    { key: "basic", icon: "settings", label: t.basicSettings },
+    { key: "appearance", icon: "wrench", label: t.appearanceSettings },
+  ];
+
+  const sectionMap: Record<NavKey, React.RefObject<HTMLDivElement | null>> = {
+    basic: basicRef,
+    appearance: appearanceRef,
+  };
+
+  // Scroll to section on nav click
+  const handleNavClick = (key: NavKey) => {
+    scrollingByClick.current = true;
+    sectionMap[key].current?.scrollIntoView({ behavior: "smooth" });
+    setActiveNav(key);
+    setTimeout(() => {
+      scrollingByClick.current = false;
+    }, 600);
+  };
+
+  // IntersectionObserver: auto-highlight nav based on visible section
+  useEffect(() => {
+    const sections = [basicRef.current, appearanceRef.current].filter(Boolean) as HTMLElement[];
+    if (sections.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (scrollingByClick.current) return;
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+        if (visible.length > 0) {
+          const el = visible[0].target as HTMLElement;
+          const key = el.dataset.section as NavKey;
+          if (key) setActiveNav(key);
+        }
+      },
+      { rootMargin: "-20% 0px -70% 0px" }
+    );
+
+    sections.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
+
+  const clearCacheField = (
+    <div className={s.field}>
+      <span className={s.fieldLabel}>{t.clearCache}</span>
+      <button onClick={handleClearCache} style={btnSmall}>
+        {t.clearCache}
+      </button>
+    </div>
+  );
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <label
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 12,
-          fontSize: 12,
-        }}
-      >
-        <span>{t.language}:</span>
-        <Select
-          options={[
-            { value: "zh", label: "中文" },
-            { value: "en", label: "English" },
-          ]}
-          value={lang}
-          onChange={(v) => handleLang(v as Lang)}
-        />
-      </label>
+    <div className={s.container}>
+      {/* Left navigation */}
+      <nav className={s.nav}>
+        {navItems.map((item) => (
+          <button
+            key={item.key}
+            className={`${s.navItem} ${activeNav === item.key ? s.navItemActive : ""}`}
+            onClick={() => handleNavClick(item.key)}
+          >
+            <span className={s.navIcon}>
+              <Icon type={item.icon} size={14} />
+            </span>
+            {item.label}
+          </button>
+        ))}
+      </nav>
 
-      <label
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 12,
-          fontSize: 12,
-        }}
-      >
-        <span>{t.theme}:</span>
-        <Select
-          options={[
-            { value: "dark", label: "Dark" },
-            { value: "light", label: "Light" },
-          ]}
-          value={theme}
-          onChange={(v) => handleTheme(v as Theme)}
-        />
-      </label>
+      {/* Right content */}
+      <div className={s.content}>
+        {/* Basic Settings */}
+        <div ref={basicRef} data-section="basic">
+          <div className={s.sectionTitle}>{t.basicSettings}</div>
 
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 12,
-        }}
-      >
-        <span style={{ fontSize: 13, color: "var(--text)" }}>
-          {t.clearCache}
-        </span>
-        <button onClick={handleClearCache} style={btnSmall}>
-          {t.clearCache}
-        </button>
+          <div className={s.field}>
+            <span className={s.fieldLabel}>{t.language}</span>
+            <Select
+              options={[
+                { value: "zh", label: "中文" },
+                { value: "en", label: "English" },
+              ]}
+              value={lang}
+              onChange={(v) => handleLang(v as Lang)}
+            />
+          </div>
+
+          {clearCacheField}
+        </div>
+
+        {/* Appearance Settings */}
+        <div ref={appearanceRef} data-section="appearance" style={{ marginTop: 32 }}>
+          <div className={s.sectionTitle}>{t.appearanceSettings}</div>
+
+          <div className={s.field}>
+            <span className={s.fieldLabel}>{t.theme}</span>
+            <Select
+              options={[
+                { value: "dark", label: "Dark" },
+                { value: "light", label: "Light" },
+              ]}
+              value={theme}
+              onChange={(v) => handleTheme(v as Theme)}
+            />
+          </div>
+
+          {/* Background gallery */}
+          <div className={s.field}>
+            <span className={s.fieldLabel}>{t.backgroundImage}</span>
+            <Switch checked={enabled} onChange={setEnabled} />
+          </div>
+
+          <div className={s.bgGrid}>
+            {items.map((item) => (
+              <div
+                key={item.id}
+                className={`${s.bgThumb} ${item.selected ? s.bgThumbActive : ""}`}
+                onClick={() => setActiveBackground(item.id)}
+              >
+                <img src={item.dataUrl} alt={item.filename} />
+                <button
+                  className={s.bgDelete}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteBackground(item.id);
+                  }}
+                >
+                  <Icon type="close" size={10} />
+                </button>
+                {item.selected && <span className={s.bgCheck}>✓</span>}
+              </div>
+            ))}
+            <div className={s.bgAdd} onClick={selectBackground}>
+              <span className={s.bgAddIcon}>+</span>
+            </div>
+            {items.length === 0 && (
+              <div className={s.bgPlaceholder}>{t.noBackground}</div>
+            )}
+          </div>
+        </div>
       </div>
 
       <Toast

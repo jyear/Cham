@@ -31,6 +31,13 @@ export interface ConvertResult {
   error?: string;
 }
 
+export interface BackgroundItem {
+  id: number;
+  filename: string;
+  selected: boolean;
+  dataUrl: string;
+}
+
 export interface ChamAPI {
   // File / Conversion
   selectFiles: () => Promise<FileInfo[]>;
@@ -56,6 +63,10 @@ export interface ChamAPI {
   }) => Promise<ConvertResult[]>;
   getFileHash: (filePath: string) => Promise<{ success: boolean; hash?: string; error?: string }>;
   readImage: (filePath: string) => Promise<{ success: boolean; dataUrl?: string; error?: string }>;
+  backgroundList: () => Promise<{ success: boolean; items?: BackgroundItem[]; error?: string }>;
+  backgroundSelect: () => Promise<{ success: boolean; items?: BackgroundItem[]; error?: string }>;
+  backgroundSetActive: (id: number) => Promise<{ success: boolean; dataUrl?: string; items?: BackgroundItem[]; error?: string }>;
+  backgroundDelete: (id: number) => Promise<{ success: boolean; dataUrl?: string; items?: BackgroundItem[]; error?: string }>;
   checkCached: (inputPath: string) => Promise<{ cached: boolean; outputPath?: string; error?: string }>;
   loadSettings: () => Promise<{ success: boolean; settings?: Record<string, string>; error?: string }>;
   saveSettings: (settings: Record<string, string>) => Promise<{ success: boolean; error?: string }>;
@@ -111,6 +122,10 @@ contextBridge.exposeInMainWorld('cham', {
   }) => ipcRenderer.invoke('convert-images', params),
   getFileHash: (filePath: string) => ipcRenderer.invoke('get-file-hash', filePath),
   readImage: (filePath: string) => ipcRenderer.invoke('read-image', filePath),
+  backgroundList: () => ipcRenderer.invoke('background:list'),
+  backgroundSelect: () => ipcRenderer.invoke('background:select'),
+  backgroundSetActive: (id: number) => ipcRenderer.invoke('background:set-active', id),
+  backgroundDelete: (id: number) => ipcRenderer.invoke('background:delete', id),
   checkCached: (inputPath: string) => ipcRenderer.invoke('check-cached', inputPath),
   loadSettings: () => ipcRenderer.invoke('load-settings'),
   saveSettings: (settings: Record<string, string>) => ipcRenderer.invoke('save-settings', settings),

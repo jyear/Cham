@@ -8,6 +8,7 @@ import { registerFormatOptionsHandlers } from './formatOptions';
 import { registerCacheHandlers } from './cache';
 import { registerSettingsHandlers } from './settings';
 import { registerUpdateHandlers } from './update';
+import { registerBackgroundHandlers } from './backgrounds';
 
 export { stopWatcher } from './watch';
 
@@ -20,9 +21,10 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
   registerFileHandlers(getMainWindow);
   registerConversionHandlers(getMainWindow);
   registerWatchHandlers(getMainWindow);
-  registerFileOpsHandlers();
+  registerFileOpsHandlers(getMainWindow);
   registerFormatOptionsHandlers();
   registerCacheHandlers();
   registerSettingsHandlers();
   registerUpdateHandlers(getMainWindow);
+  registerBackgroundHandlers(getMainWindow);
 }

@@ -7,9 +7,11 @@ interface Props {
   title: string;
   children: ReactNode;
   onClose: () => void;
+  width?: number;
+  height?: number;
 }
 
-export default function Modal({ open, title, children, onClose }: Props) {
+export default function Modal({ open, title, children, onClose, width, height }: Props) {
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
@@ -23,7 +25,11 @@ export default function Modal({ open, title, children, onClose }: Props) {
 
   return (
     <div className={s.overlay} onClick={onClose}>
-      <div className={s.modal} onClick={(e) => e.stopPropagation()}>
+      <div
+        className={s.modal}
+        style={{ width, height }}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className={s.header}>
           <h2 className={s.title}>{title}</h2>
           <button className={s.close} onClick={onClose}>

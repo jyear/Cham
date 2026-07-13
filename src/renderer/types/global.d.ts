@@ -29,6 +29,13 @@ declare global {
     error?: string;
   }
 
+  interface BackgroundItem {
+    id: number;
+    filename: string;
+    selected: boolean;
+    dataUrl: string;
+  }
+
   interface ChamAPI {
     selectFiles: () => Promise<FileInfo[]>;
     selectFolder: () => Promise<FolderResult>;
@@ -53,6 +60,10 @@ declare global {
     }) => Promise<ConvertResult[]>;
     getFileHash: (filePath: string) => Promise<{ success: boolean; hash?: string; error?: string }>;
     readImage: (filePath: string) => Promise<{ success: boolean; dataUrl?: string; error?: string }>;
+    backgroundList: () => Promise<{ success: boolean; items?: BackgroundItem[]; error?: string }>;
+    backgroundSelect: () => Promise<{ success: boolean; items?: BackgroundItem[]; error?: string }>;
+    backgroundSetActive: (id: number) => Promise<{ success: boolean; dataUrl?: string; items?: BackgroundItem[]; error?: string }>;
+    backgroundDelete: (id: number) => Promise<{ success: boolean; dataUrl?: string; items?: BackgroundItem[]; error?: string }>;
     loadSettings: () => Promise<{ success: boolean; settings?: Record<string, string>; error?: string }>;
     saveSettings: (settings: Record<string, string>) => Promise<{ success: boolean; error?: string }>;
     saveFormatOptions: (formatType: string, options: Record<string, any>) => Promise<{ success: boolean; error?: string }>;

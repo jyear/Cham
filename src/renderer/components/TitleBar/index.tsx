@@ -159,7 +159,13 @@ export default function TitleBar({ maximized }: Props) {
         </div>
       </div>
 
-      <Modal open={settingsOpen} title={t.settingsTitle} onClose={() => setSettingsOpen(false)}>
+      <Modal
+        open={settingsOpen}
+        title={t.settingsTitle}
+        onClose={() => setSettingsOpen(false)}
+        width={600}
+        height={400}
+      >
         <Settings />
       </Modal>
 

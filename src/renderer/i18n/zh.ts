@@ -49,6 +49,8 @@ const zh = {
   // Settings page
   settingsTitle: '设置',
   settingsDesc: '语言 / Language',
+  basicSettings: '基本设置',
+  appearanceSettings: '外观设置',
   theme: '主题',
   language: '语言',
   currentVersion: (v: string) => `当前版本: ${v}`,
@@ -96,6 +98,12 @@ const zh = {
   optMixedDesc: '允许混合有损和无损动画帧（较慢）',
   optExact: '精确颜色',
   optExactDesc: '保留透明像素中的颜色数据',
+
+  // Background image
+  backgroundImage: '背景图片',
+  selectBackgroundImage: '选择图片...',
+  resetBackground: '重置',
+  noBackground: '无背景图片',
 
   // Misc
   minimize: '最小化',

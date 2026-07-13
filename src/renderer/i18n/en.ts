@@ -49,6 +49,8 @@ const en = {
   // Settings page
   settingsTitle: 'Settings',
   settingsDesc: 'Language / 语言',
+  basicSettings: 'Basic',
+  appearanceSettings: 'Appearance',
   theme: 'Theme',
   language: 'Language',
   currentVersion: (v: string) => `Current version: ${v}`,
@@ -96,6 +98,12 @@ const en = {
   optMixedDesc: 'Allow mixing lossy and lossless animation frames (slower)',
   optExact: 'Exact',
   optExactDesc: 'Preserve color data in transparent pixels',
+
+  // Background image
+  backgroundImage: 'Background Image',
+  selectBackgroundImage: 'Select Image...',
+  resetBackground: 'Reset',
+  noBackground: 'No background image',
 
   // Misc
   minimize: 'Minimize',

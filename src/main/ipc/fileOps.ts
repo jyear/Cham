@@ -1,9 +1,9 @@
-import { ipcMain } from 'electron';
+import { ipcMain, type BrowserWindow } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
 import { getFileHash } from '../format';
 
-export function registerFileOpsHandlers(): void {
+export function registerFileOpsHandlers(getMainWindow: () => BrowserWindow | null): void {
   // Delete a file (used by watch mode to clean up output)
   ipcMain.handle('delete-file', async (_event, filePath: string) => {
     try {
