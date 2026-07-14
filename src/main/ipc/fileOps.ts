@@ -1,9 +1,19 @@
 import { ipcMain, app, type BrowserWindow } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
-import { getFileHash } from '../format';
+import * as crypto from 'crypto';
 import { isSafePath } from '../../shared/utils/pathUtils';
 import { getMimeType } from '../../shared/utils/mime';
+
+function getFileHash(filePath: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const hash = crypto.createHash('md5');
+    const stream = fs.createReadStream(filePath);
+    stream.on('error', (err) => reject(err));
+    stream.on('data', (chunk) => hash.update(chunk));
+    stream.on('end', () => resolve(hash.digest('hex')));
+  });
+}
 
 export function registerFileOpsHandlers(getMainWindow: () => BrowserWindow | null): void {
   // Delete a file (used by watch mode to clean up output)

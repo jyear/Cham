@@ -12,7 +12,7 @@ module.exports = (_env, argv) => {
     entry: {
       index: './src/main/index.ts',
       preload: './src/main/preload/index.ts',
-      worker: './src/main/worker.ts',
+      worker: './src/main/plugins/builtin/conversion/worker.ts',
     },
     target: 'electron-main',
     module: {

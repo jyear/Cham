@@ -11,17 +11,12 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { ipcMain } from 'electron';
-import { type OutputFormat, CONVERTIBLE_EXTENSIONS } from '../../format';
-import {
-  makeSourceId,
-  findBySourceId,
-  upsertConversion,
-  clearConversions,
-} from '../../db';
-import { saveFormatOptions, loadFormatOptions } from '../../db';
-import { WorkerPool } from '../../worker-pool';
+import { type OutputFormat, CONVERTIBLE_EXTENSIONS } from './format';
+import { makeSourceId, findBySourceId, upsert as upsertConversion, clearAll as clearConversions } from './db/conversions';
+import { save as saveFormatOptions, load as loadFormatOptions } from './db/formatOptions';
+import { WorkerPool } from './worker-pool';
 import { watch, type FSWatcher } from 'chokidar';
-import type { PluginManifest, PluginMainApi } from '../../../shared/plugin/types';
+import type { PluginManifest, PluginMainApi } from '../../../../shared/plugin/types';
 
 // ── Plugin Manifest ──
 
@@ -86,6 +81,9 @@ function stopWatcher(): void {
 // ── Main Module ──
 
 export default function conversionMain(api: PluginMainApi) {
+  // Ensure indexes (plugin system creates tables from manifest, but not indexes)
+  api.db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_conversions_source_id ON conversions (source_id)');
+
   // ── convert-image ──
   api.registerHandler('convert-image',
     async (_event, params: {
@@ -119,7 +117,7 @@ export default function conversionMain(api: PluginMainApi) {
 
         const { hash: inputHash } = await getPool().execute({ type: 'hash', filePath: params.inputPath });
         const sourceId = makeSourceId(params.inputPath, inputHash);
-        const record = findBySourceId(sourceId);
+        const record = findBySourceId(api.db, sourceId);
 
         if (record && record.format === fmt && record.quality === quality &&
             record.output_path === outputPath && fs.existsSync(record.output_path)) {
@@ -136,7 +134,7 @@ export default function conversionMain(api: PluginMainApi) {
         });
 
         const { hash: outputHash } = await getPool().execute({ type: 'hash', filePath: outputPath });
-        upsertConversion(sourceId, fmt, quality, outputPath, outputHash);
+        upsertConversion(api.db, sourceId, fmt, quality, outputPath, outputHash);
 
         return { success: true, outputPath, outputSize, cached: false };
       } catch (error: any) {
@@ -184,7 +182,7 @@ export default function conversionMain(api: PluginMainApi) {
 
           const { hash: inputHash } = await workerPool.execute({ type: 'hash', filePath: file.path });
           const sourceId = makeSourceId(file.path, inputHash);
-          const record = findBySourceId(sourceId);
+          const record = findBySourceId(api.db, sourceId);
 
           if (record && record.format === fmt && record.quality === quality &&
               record.output_path === outputPath && fs.existsSync(record.output_path)) {
@@ -201,7 +199,7 @@ export default function conversionMain(api: PluginMainApi) {
           });
 
           const { hash: outputHash } = await workerPool.execute({ type: 'hash', filePath: outputPath });
-          upsertConversion(sourceId, fmt, quality, outputPath, outputHash);
+          upsertConversion(api.db, sourceId, fmt, quality, outputPath, outputHash);
 
           const progressResult = { inputPath: file.path, outputPath, outputSize: convResult.outputSize, success: true, cached: false };
           api.sendEvent('convert-progress', progressResult);
@@ -223,7 +221,7 @@ export default function conversionMain(api: PluginMainApi) {
         const fmt = format || 'webp';
         const { hash: inputHash } = await getPool().execute({ type: 'hash', filePath: inputPath });
         const sourceId = makeSourceId(inputPath, inputHash);
-        const record = findBySourceId(sourceId);
+        const record = findBySourceId(api.db, sourceId);
 
         if (record && record.format === fmt && record.quality === q && fs.existsSync(record.output_path)) {
           const { hash: outputHash } = await getPool().execute({ type: 'hash', filePath: record.output_path });
@@ -241,7 +239,7 @@ export default function conversionMain(api: PluginMainApi) {
   // ── clear-cache (hook + backward compat IPC) ──
   // Registered at 'startup' timing — only fires on app restart, not mid-session install.
   api.registerHook('cache:clear', async () => {
-    clearConversions();
+    clearConversions(api.db);
     api.log.info('Conversion cache cleared');
   }, 'startup');
 
@@ -326,7 +324,7 @@ export default function conversionMain(api: PluginMainApi) {
   api.registerHandler('save-format-options',
     async (_event, formatType: string, options: Record<string, any>) => {
       try {
-        saveFormatOptions(formatType, options);
+        saveFormatOptions(api.db, formatType, options);
         return { success: true };
       } catch (error: any) {
         return { success: false, error: error.message };
@@ -337,7 +335,7 @@ export default function conversionMain(api: PluginMainApi) {
   api.registerHandler('load-format-options',
     async (_event, formatType: string) => {
       try {
-        const options = loadFormatOptions(formatType);
+        const options = loadFormatOptions(api.db, formatType);
         return { success: true, options };
       } catch (error: any) {
         return { success: false, error: error.message };

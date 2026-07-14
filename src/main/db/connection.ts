@@ -23,39 +23,13 @@ export function init(dbPath?: string): void {
 
   // ── Schema ──
 
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS conversions (
-      id          INTEGER PRIMARY KEY AUTOINCREMENT,
-      source_id   TEXT NOT NULL,
-      format      TEXT NOT NULL DEFAULT 'webp',
-      quality     INTEGER NOT NULL DEFAULT 100,
-      output_path TEXT NOT NULL,
-      output_hash TEXT NOT NULL,
-      created_at  TEXT DEFAULT (datetime('now')),
-      updated_at  TEXT DEFAULT (datetime('now'))
-    );
-  `);
-
-  migrateConversions();
-
-  db.exec(`DROP INDEX IF EXISTS idx_conversions_lookup`);
-  db.exec(`DROP INDEX IF EXISTS idx_conversions_input`);
-  db.exec(`
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_conversions_source_id
-      ON conversions (source_id);
-  `);
+  // conversions + format_options tables are now created by the
+  // Conversion builtin plugin via PluginManifest.dbTables
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS settings (
       key   TEXT PRIMARY KEY,
       value TEXT NOT NULL
-    );
-  `);
-
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS format_options (
-      format_type TEXT PRIMARY KEY,
-      options     TEXT NOT NULL
     );
   `);
 
@@ -110,33 +84,6 @@ export function close(): void {
     db.close();
     db = null;
   }
-}
-
-// ── Migrations ──
-
-function migrateConversions(): void {
-  if (!db) return;
-
-  try { db.exec(`ALTER TABLE conversions ADD COLUMN quality INTEGER NOT NULL DEFAULT 100`); } catch { /* ok */ }
-  try { db.exec(`ALTER TABLE conversions ADD COLUMN source_id TEXT NOT NULL DEFAULT ''`); } catch { /* ok */ }
-
-  try {
-    db.exec(`
-      UPDATE conversions
-      SET source_id = input_path || '|' || input_hash
-      WHERE source_id = '' AND input_path IS NOT NULL AND input_hash IS NOT NULL
-    `);
-  } catch { /* ok */ }
-
-  try {
-    db.exec(`
-      DELETE FROM conversions
-      WHERE id NOT IN (
-        SELECT MAX(id) FROM conversions WHERE source_id != '' GROUP BY source_id
-      )
-      AND source_id != ''
-    `);
-  } catch { /* ok */ }
 }
 
 function defaultPath(): string {

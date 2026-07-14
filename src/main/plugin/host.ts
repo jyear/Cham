@@ -41,7 +41,7 @@ interface HookEntry {
 class PluginHost {
   private active = new Map<string, ActivePlugin>();
   private registeredChannels = new Map<string, string>(); // channel → pluginId
-  private builtinModules = new Map<string, PluginMainModule>();
+  private builtinModules = new Map<string, { manifest: PluginManifest; module: PluginMainModule }>();
   private hooks = new Map<string, HookEntry[]>();
   private getMainWindow: (() => BrowserWindow | null) | null = null;
   private startupComplete = false;
@@ -57,7 +57,7 @@ class PluginHost {
    * unlike store plugins which are VM-sandboxed.
    */
   registerBuiltin(manifest: PluginManifest, mainModule: PluginMainModule): void {
-    this.builtinModules.set(manifest.id, mainModule);
+    this.builtinModules.set(manifest.id, { manifest, module: mainModule });
   }
 
   /**
@@ -65,23 +65,20 @@ class PluginHost {
    * Called once during app startup.
    */
   async start(): Promise<void> {
-    // 1. Activate builtin plugins (compiled in, no install path needed)
-    for (const [id, mainModule] of this.builtinModules) {
+    // 1. Activate builtin plugins (compiled in, with full manifest)
+    for (const [, { manifest, module: mainModule }] of this.builtinModules) {
       try {
-        // Builtins use a synthetic install path (app root)
-        const builtinManifest: PluginManifest = {
-          id,
-          name: id,
-          version: '1.0.0',
-          icon: 'image',
-          color: '',
-          category: 'builtin',
-          entry: '',
-          main: `${id}.js`,
-        };
-        await this.activateInternal(builtinManifest, '', mainModule);
+        // Create plugin-declared tables before activation
+        if (manifest.dbTables && manifest.dbTables.length > 0) {
+          const { buildTableSQL } = require('../../shared/plugin/types');
+          for (const sql of buildTableSQL(manifest.dbTables)) {
+            getDb().exec(sql);
+          }
+          console.log(`[PluginHost] Created ${manifest.dbTables.length} table(s) for builtin "${manifest.id}"`);
+        }
+        await this.activateInternal(manifest, '', mainModule);
       } catch (err: any) {
-        console.error(`[PluginHost] Failed to start builtin "${id}": ${err.message}`);
+        console.error(`[PluginHost] Failed to start builtin "${manifest.id}": ${err.message}`);
       }
     }
 
