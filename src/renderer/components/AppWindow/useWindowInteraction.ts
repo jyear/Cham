@@ -98,38 +98,39 @@ export function useWindowInteraction(opts: UseWindowInteractionOpts) {
         const dy = e.clientY - pointerOffset.current.y;
         const axis = RESIZE_AXIS[resizing.current];
         const rs = resizeStart.current;
+        const db = desktopRef.current;
 
         setSize((prev) => {
           let nw = prev.w;
           let nh = prev.h;
 
-          if (axis.dx > 0) nw = Math.max(minWidth, rs.w + dx);
-          else if (axis.dx < 0) nw = Math.max(minWidth, rs.w - dx);
+          if (axis.dx > 0) {
+            // Right edge: clamp to desktop bounds
+            const maxW = db ? db.left + db.width - rs.x : Infinity;
+            nw = Math.max(minWidth, Math.min(rs.w + dx, maxW));
+          } else if (axis.dx < 0) {
+            // Left edge: shrink from left
+            nw = Math.max(minWidth, rs.w - dx);
+          }
 
-          if (axis.dy > 0) nh = Math.max(minHeight, rs.h + dy);
-          else if (axis.dy < 0) nh = Math.max(minHeight, rs.h - dy);
+          if (axis.dy > 0) {
+            // Bottom edge: clamp to desktop bounds
+            const maxH = db ? db.top + db.height - rs.y : Infinity;
+            nh = Math.max(minHeight, Math.min(rs.h + dy, maxH));
+          } else if (axis.dy < 0) {
+            // Top edge: shrink from top
+            nh = Math.max(minHeight, rs.h - dy);
+          }
 
           return { w: nw, h: nh };
         });
 
-        // Move origin for W / N edges
-        setPos((p) => ({
-          x: axis.dx < 0 ? rs.x + dx : p.x,
-          y: axis.dy < 0 ? rs.y + dy : p.y,
-        }));
-
-        // Clamp position after potential origin shift
-        // (done via a microtask-style approach: the next line sets both correctly)
-        if (axis.dx < 0 || axis.dy < 0) {
-          const db = desktopRef.current;
-          if (db) {
-            const sw = sizeRef.current;
-            setPos((p) => ({
-              x: axis.dx < 0 ? clamp(rs.x + dx, db.left, db.left + db.width - sw.w) : p.x,
-              y: axis.dy < 0 ? clamp(rs.y + dy, db.top, db.top + db.height - sw.h) : p.y,
-            }));
-          }
-        }
+        // Move origin for W / N edges, clamped to desktop
+        setPos((p) => {
+          const nx = axis.dx < 0 ? clamp(rs.x + dx, db?.left ?? -Infinity, db ? db.left + db.width - sizeRef.current.w : Infinity) : p.x;
+          const ny = axis.dy < 0 ? clamp(rs.y + dy, db?.top ?? -Infinity, db ? db.top + db.height - sizeRef.current.h : Infinity) : p.y;
+          return { x: nx, y: ny };
+        });
       }
     },
     [mode, minWidth, minHeight],
