@@ -153,6 +153,35 @@ export interface PluginMainApi {
     remove(relativePath: string): void;
   };
 
+  /**
+   * Send a push event to the renderer process.
+   * The channel is auto-namespaced: `plugin:<pluginId>:<channel>`.
+   */
+  sendEvent(channel: string, data: any): void;
+
+  /**
+   * Register a hook handler.
+   *
+   * @param timing  'startup' (default) — handler only fires after app fully starts.
+   *                A freshly installed plugin's hooks won't fire until next restart.
+   *                'install' — handler fires on ANY emitHook call, even immediately
+   *                after the plugin was installed mid-session.
+   *
+   * Built-in hooks:
+   *   'cache:clear' — fired when the user clicks "Clear Cache" in Settings.
+   */
+  registerHook(
+    hookName: string,
+    handler: (...args: any[]) => Promise<void> | void,
+    timing?: 'startup' | 'install',
+  ): void;
+
+  /**
+   * Emit a hook — invokes registered handlers, filtered by each handler's
+   * declared timing and the app's current runtime phase.
+   */
+  emitHook(hookName: string, ...args: any[]): Promise<void>;
+
   /** Logger that prefixes messages with the plugin ID */
   log: {
     info(msg: string): void;

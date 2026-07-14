@@ -71,7 +71,8 @@ export default function Settings() {
 
   const handleClearCache = async () => {
     if (!window.cham) return;
-    const result = await window.cham.clearCache();
+    // Emit hook — each plugin's timing setting decides whether it fires
+    const result = await window.cham.plugin.emitHook('cache:clear');
     if (result.success) {
       showToast(t.cacheCleared);
     }

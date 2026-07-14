@@ -160,15 +160,18 @@ export async function installPlugin(manifestUrl: string): Promise<PluginManifest
     console.log(`[plugin] Created ${manifest.dbTables.length} table(s) for ${manifest.id}`);
   }
 
-  // Register in the database
+  // Register in the database.
+  // NOTE: We do NOT activate the main module here.
+  // Hooks and custom IPC handlers only become active on next app startup
+  // (via pluginHost.start()), so that a freshly installed plugin cannot
+  // immediately inject hooks or handlers into the running session.
   insertManifest(manifest.id, manifest, pluginDir, manifest.version);
 
-  // Activate the main module if present
   if (manifest.main) {
-    await pluginHost.activate(manifest, pluginDir);
+    console.log(`[plugin] ${manifest.id} has a main module — will activate on next restart`);
   }
 
-  console.log(`[plugin] Registered ${manifest.id} v${manifest.version}`);
+  console.log(`[plugin] Installed ${manifest.id} v${manifest.version}`);
 
   return manifest;
 }

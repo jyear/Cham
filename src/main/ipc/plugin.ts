@@ -118,6 +118,20 @@ export function registerPluginHandlers(_getMainWindow: () => BrowserWindow | nul
     },
   );
 
+  // ── Hooks (Phase 2) ──
+
+  ipcMain.handle(
+    'plugin:emitHook',
+    async (_event, hookName: string, ...args: any[]) => {
+      try {
+        await pluginHost.emitHook(hookName, ...args);
+        return { success: true };
+      } catch (error: any) {
+        return { success: false, error: error.message };
+      }
+    },
+  );
+
   // ── Plugin status (Phase 2) ──
 
   ipcMain.handle('plugin:isActive', async (_event, pluginId: string) => {

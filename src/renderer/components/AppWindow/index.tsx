@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { useWindows } from '@/contexts/WindowContext';
 import { WindowMode } from './types';
 import { useWindowInteraction } from './useWindowInteraction';
+import PluginErrorBoundary from '@/components/PluginErrorBoundary';
 import { useDockAnimation } from './useDockAnimation';
 import TrafficLights from './TrafficLights';
 import ResizeHandles from './ResizeHandles';
@@ -83,7 +84,9 @@ export default function AppWindow({ win }: Props) {
 
       {/* Content */}
       <div className={s.content}>
-        <win.Component />
+        <PluginErrorBoundary pluginId={win.appKey} pluginName={win.title}>
+          <win.Component />
+        </PluginErrorBoundary>
         {win.description && <AppInfo win={win} open={showInfo} onClose={() => setShowInfo(false)} />}
       </div>
 

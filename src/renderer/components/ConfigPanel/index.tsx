@@ -110,7 +110,7 @@ export default function ConfigPanel({
       </div>
 
       <div className={s.convertArea}>
-        <button className={`btn btnPrimary ${s.convertBtn} ${status === 'converting' ? 'loading' : ''}`}
+        <button className={`${s.convertBtn} ${status === 'converting' ? s.convertBtnLoading : ''}`}
           disabled={!canConvert} onClick={onConvert}>
           {status === 'converting' ? t.converting : status === 'done' ? t.convertAgain : t.convert}
         </button>

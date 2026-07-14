@@ -188,3 +188,37 @@
   border-color: var(--primary);
 }
 
+/* Convert button (replaces global .btn / .btnPrimary) */
+.convertBtn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+  outline: none;
+  background: var(--primary);
+  color: #fff;
+}
+
+.convertBtn:hover:not(:disabled) {
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(108, 92, 231, 0.4);
+}
+
+.convertBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.convertBtnLoading {
+  animation: convPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes convPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+

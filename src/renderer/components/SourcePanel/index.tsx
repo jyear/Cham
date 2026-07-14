@@ -78,16 +78,16 @@ export default function SourcePanel({
       </div>
 
       <div className={s.actions}>
-        <button className={`btn btnPanel`} onClick={onSelectFolder}>
+        <button className={s.actionBtn} onClick={onSelectFolder}>
           <Icon type="folder" size={14} />
           {t.addFolder}
         </button>
-        <button className={`btn btnPanel`} onClick={onSelectFiles}>
+        <button className={s.actionBtn} onClick={onSelectFiles}>
           <Icon type="file" size={14} />
           {t.addFiles}
         </button>
         {files.length > 0 && (
-          <button className={`btn btnPanel ${s.clearBtn}`} onClick={onClearFiles}>{t.clearAll}</button>
+          <button className={`${s.actionBtn} ${s.clearBtn}`} onClick={onClearFiles}>{t.clearAll}</button>
         )}
       </div>
     </div>

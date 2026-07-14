@@ -121,19 +121,28 @@ class PluginRegistry {
     }
 
     // Evaluate the plugin source in a controlled sandbox.
-    // The plugin source should assign to a global registry slot.
-    // Expected plugin bundle format:
+    // We do NOT pass the real `window` object — plugins get only the APIs they need.
+    //
+    // Plugin bundle format:
     //   var __chamPlugin = (function() { ... return { default: MyComponent }; })();
     try {
+      // Build a minimal sandbox: only expose `cham` (IPC bridge) and nothing else.
+      // No `document`, no `localStorage`, no `fetch`, no `window` global.
+      const sandbox = {
+        cham: window.cham,
+        // Provide console for debugging, but filtered
+        console: {
+          log: (...args: any[]) => console.log(`[${pluginId}]`, ...args),
+          warn: (...args: any[]) => console.warn(`[${pluginId}]`, ...args),
+          error: (...args: any[]) => console.error(`[${pluginId}]`, ...args),
+        },
+      };
+
       const fn = new Function(
-        'React',
-        'ReactDOM',
-        'window',
+        '__sandbox',
         result.source + ';\nreturn typeof __chamPlugin !== "undefined" ? __chamPlugin.default : null;',
       );
-      // We pass React as a parameter so plugins can use it without bundling their own copy.
-      // For v1, plugins must use a globally-available React.
-      const Component = fn(null, null, window);
+      const Component = fn(sandbox);
       if (!Component) {
         throw new Error('Plugin did not expose a valid component');
       }

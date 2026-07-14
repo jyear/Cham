@@ -1,12 +1,28 @@
-import { ipcMain, type BrowserWindow } from 'electron';
+import { ipcMain, app, type BrowserWindow } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
 import { getFileHash } from '../format';
+
+/**
+ * Validate that a path is within an allowed directory.
+ * Prevents path traversal attacks (../../../etc/passwd).
+ */
+function isSafePath(filePath: string): boolean {
+  const normalized = path.normalize(filePath);
+  const allowedRoots = [app.getPath('userData'), app.getPath('temp')];
+  return allowedRoots.some((root) => {
+    const rootNorm = path.normalize(root) + path.sep;
+    return normalized.startsWith(rootNorm);
+  });
+}
 
 export function registerFileOpsHandlers(getMainWindow: () => BrowserWindow | null): void {
   // Delete a file (used by watch mode to clean up output)
   ipcMain.handle('delete-file', async (_event, filePath: string) => {
     try {
+      if (!isSafePath(filePath)) {
+        return { success: false, error: 'Path not allowed' };
+      }
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
         console.log('[delete] file:', filePath);
@@ -21,6 +37,9 @@ export function registerFileOpsHandlers(getMainWindow: () => BrowserWindow | nul
   // Delete a directory recursively (used by watch mode to clean up output)
   ipcMain.handle('delete-dir', async (_event, dirPath: string) => {
     try {
+      if (!isSafePath(dirPath)) {
+        return { success: false, error: 'Path not allowed' };
+      }
       if (fs.existsSync(dirPath)) {
         fs.rmSync(dirPath, { recursive: true, force: true });
         console.log('[delete] dir:', dirPath);

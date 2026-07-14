@@ -6,42 +6,58 @@
 }
 
 :root {
-  --bg: #0f0f14;
-  --bg-secondary: rgb(26, 26, 36);
-  --bg-tertiary: rgb(36, 36, 58);
-  --border: rgb(46, 46, 62);
-  --text: rgb(224, 224, 232);
-  --text-secondary: rgb(138, 138, 160);
-  --primary: rgb(108, 92, 231);
-  --primary-hover: rgb(124, 108, 207);
-  --success: rgb(0, 210, 138);
-  --error: rgb(255, 106, 107);
-  --warning: rgb(255, 169, 77);
-  --radius: 8px;
-  --transition: 0.2s ease;
+  /* Cham-namespaced variables (canonical) */
+  --cham-bg: #0f0f14;
+  --cham-bg-secondary: rgb(26, 26, 36);
+  --cham-bg-tertiary: rgb(36, 36, 58);
+  --cham-border: rgb(46, 46, 62);
+  --cham-text: rgb(224, 224, 232);
+  --cham-text-secondary: rgb(138, 138, 160);
+  --cham-primary: rgb(108, 92, 231);
+  --cham-primary-hover: rgb(124, 108, 207);
+  --cham-success: rgb(0, 210, 138);
+  --cham-error: rgb(255, 106, 107);
+  --cham-warning: rgb(255, 169, 77);
+  --cham-radius: 8px;
+  --cham-transition: 0.2s ease;
+
+  /* Legacy aliases (deprecated — use --cham-* going forward) */
+  --bg: var(--cham-bg);
+  --bg-secondary: var(--cham-bg-secondary);
+  --bg-tertiary: var(--cham-bg-tertiary);
+  --border: var(--cham-border);
+  --text: var(--cham-text);
+  --text-secondary: var(--cham-text-secondary);
+  --primary: var(--cham-primary);
+  --primary-hover: var(--cham-primary-hover);
+  --success: var(--cham-success);
+  --error: var(--cham-error);
+  --warning: var(--cham-warning);
+  --radius: var(--cham-radius);
+  --transition: var(--cham-transition);
 }
 
 [data-theme="light"] {
-  --bg: #f5f5f8;
-  --bg-secondary: rgb(255, 255, 255);
-  --bg-tertiary: rgb(232, 232, 240);
-  --border: rgb(224, 224, 220);
-  --text: rgb(40, 40, 40);
-  --text-secondary: rgb(138, 138, 160);
-  --primary: rgb(108, 92, 231);
-  --primary-hover: rgb(124, 108, 207);
-  --error: rgb(255, 106, 107);
-  --warning: rgb(255, 169, 77);
+  --cham-bg: #f5f5f8;
+  --cham-bg-secondary: rgb(255, 255, 255);
+  --cham-bg-tertiary: rgb(232, 232, 240);
+  --cham-border: rgb(224, 224, 220);
+  --cham-text: rgb(40, 40, 40);
+  --cham-text-secondary: rgb(138, 138, 160);
+  --cham-primary: rgb(108, 92, 231);
+  --cham-primary-hover: rgb(124, 108, 207);
+  --cham-error: rgb(255, 106, 107);
+  --cham-warning: rgb(255, 169, 77);
 }
 
 html {
-  background-color: var(--bg);
+  background-color: var(--cham-bg);
 }
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   background-color: transparent;
-  color: var(--text);
+  color: var(--cham-text);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   user-select: none;
@@ -72,60 +88,5 @@ html[data-has-background][data-theme="light"] {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-secondary);
-}
-
-/* === Shared Button Base === */
-.btn {
-  padding: 10px 20px;
-  border: none;
-  border-radius: var(--radius);
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--transition);
-  outline: none;
-}
-.btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.btnPrimary {
-  background: var(--primary);
-  color: #fff;
-}
-.btnPrimary:hover:not(:disabled) {
-  background: var(--primary-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(108, 92, 231, 0.4);
-}
-.btnPrimary.loading {
-  animation: pulse 1.5s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
-}
-
-.btnPanel {
-  background: var(--bg-tertiary);
-  color: var(--text-secondary);
-  font-size: 11px;
-  padding: 6px 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  font-weight: 500;
-}
-.btnPanel:hover {
-  background: var(--border);
-  color: var(--text);
-}
-
-.btnPanelDanger:hover {
-  background: rgba(255, 107, 107, 0.2);
-  color: var(--error);
 }
 

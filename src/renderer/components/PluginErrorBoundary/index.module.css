@@ -1,0 +1,58 @@
+.crash {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 32px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.6);
+  user-select: none;
+}
+
+.icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.6;
+}
+
+.title {
+  font-size: 16px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  margin-bottom: 6px;
+}
+
+.subtitle {
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.errorMessage {
+  font-size: 11px;
+  font-family: monospace;
+  color: rgba(255, 100, 100, 0.7);
+  max-width: 420px;
+  word-break: break-word;
+  background: rgba(255, 0, 0, 0.06);
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+.retryBtn {
+  padding: 6px 20px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.8);
+  transition: background 0.15s;
+}
+
+.retryBtn:hover {
+  background: rgba(255, 255, 255, 0.14);
+}

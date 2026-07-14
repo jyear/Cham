@@ -98,3 +98,25 @@
   background: rgba(255, 107, 107, 0.2);
   color: var(--error);
 }
+
+/* Action buttons (replaces global .btn / .btnPanel) */
+.actionBtn {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  font-size: 11px;
+  padding: 6px 10px;
+  border: none;
+  border-radius: var(--radius);
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  transition: all var(--transition);
+  outline: none;
+}
+
+.actionBtn:hover {
+  background: var(--border);
+}

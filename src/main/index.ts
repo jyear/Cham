@@ -1,9 +1,10 @@
 import { app, BrowserWindow, Menu } from 'electron';
 import * as path from 'path';
-import { registerIpcHandlers, stopWatcher, destroyConversionPool } from './ipc';
+import { registerIpcHandlers } from './ipc';
 import { init as initDb, close as closeDb } from './db';
 import { checkForUpdates } from './update';
 import { pluginHost } from './plugin/host';
+import conversionMain, { manifest as conversionManifest } from './plugins/builtin/conversion';
 
 const isDev = process.env.NODE_ENV === 'development';
 const DEV_SERVER_URL = 'http://localhost:9000';
@@ -60,6 +61,12 @@ app.whenReady().then(async () => {
   initDb();
   createWindow();
 
+  // Give host access to the main window for push events
+  pluginHost.setMainWindowGetter(() => mainWindow);
+
+  // Register builtin plugins
+  pluginHost.registerBuiltin(conversionManifest, conversionMain);
+
   // Activate all installed plugins' main modules
   await pluginHost.start();
 
@@ -72,8 +79,8 @@ app.whenReady().then(async () => {
 });
 
 app.on('window-all-closed', () => {
-  stopWatcher();
-  destroyConversionPool();
+  // Deactivate all plugin main modules (runs their cleanup)
+  pluginHost.deactivateAll();
   closeDb();
   if (process.platform !== 'darwin') {
     app.quit();

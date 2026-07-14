@@ -123,6 +123,7 @@ export interface ChamAPI {
     listItems: (pluginId: string) => Promise<{ success: boolean; items?: Array<{ key: string; value: string }>; error?: string }>;
     call: (pluginId: string, channel: string, ...args: any[]) => Promise<any>;
     isActive: (pluginId: string) => Promise<{ success: boolean; active: boolean; error?: string }>;
+    emitHook: (hookName: string, ...args: any[]) => Promise<{ success: boolean; error?: string }>;
   };
 }
 
@@ -139,7 +140,7 @@ contextBridge.exposeInMainWorld('cham', {
     keepName?: boolean;
     copyNonConvertible?: boolean;
     format?: string;
-  }) => ipcRenderer.invoke('convert-image', params),
+  }) => ipcRenderer.invoke('plugin:conversion:convert-image', params),
   convertImages: (params: {
     files: FileInfo[];
     outputDir: string;
@@ -147,20 +148,20 @@ contextBridge.exposeInMainWorld('cham', {
     keepName?: boolean;
     copyNonConvertible?: boolean;
     format?: string;
-  }) => ipcRenderer.invoke('convert-images', params),
+  }) => ipcRenderer.invoke('plugin:conversion:convert-images', params),
   getFileHash: (filePath: string) => ipcRenderer.invoke('get-file-hash', filePath),
   readImage: (filePath: string) => ipcRenderer.invoke('read-image', filePath),
   backgroundList: () => ipcRenderer.invoke('background:list'),
   backgroundSelect: () => ipcRenderer.invoke('background:select'),
   backgroundSetActive: (id: number) => ipcRenderer.invoke('background:set-active', id),
   backgroundDelete: (id: number) => ipcRenderer.invoke('background:delete', id),
-  checkCached: (inputPath: string) => ipcRenderer.invoke('check-cached', inputPath),
+  checkCached: (inputPath: string) => ipcRenderer.invoke('plugin:conversion:check-cached', inputPath),
   loadSettings: () => ipcRenderer.invoke('load-settings'),
   saveSettings: (settings: Record<string, string>) => ipcRenderer.invoke('save-settings', settings),
   saveFormatOptions: (formatType: string, options: Record<string, any>) =>
-    ipcRenderer.invoke('save-format-options', formatType, options),
-  loadFormatOptions: (formatType: string) => ipcRenderer.invoke('load-format-options', formatType),
-  clearCache: () => ipcRenderer.invoke('clear-cache'),
+    ipcRenderer.invoke('plugin:conversion:save-format-options', formatType, options),
+  loadFormatOptions: (formatType: string) => ipcRenderer.invoke('plugin:conversion:load-format-options', formatType),
+  clearCache: () => ipcRenderer.invoke('plugin:conversion:clear-cache'),
   checkUpdate: () => ipcRenderer.invoke('check-update'),
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
   downloadUpdate: () => ipcRenderer.invoke('download-update'),
@@ -179,19 +180,19 @@ contextBridge.exposeInMainWorld('cham', {
   },
 
   // Watch mode
-  watchStart: (folderPath: string) => ipcRenderer.invoke('watch-start', folderPath),
-  watchStop: () => ipcRenderer.invoke('watch-stop'),
+  watchStart: (folderPath: string) => ipcRenderer.invoke('plugin:conversion:watch-start', folderPath),
+  watchStop: () => ipcRenderer.invoke('plugin:conversion:watch-stop'),
   onWatchChange: (callback: (ev: WatchChangeEvent) => void) => {
     const handler = (_e: Electron.IpcRendererEvent, ev: WatchChangeEvent) => callback(ev);
-    ipcRenderer.on('watch-change', handler);
-    return () => ipcRenderer.removeListener('watch-change', handler);
+    ipcRenderer.on('plugin:conversion:watch-change', handler);
+    return () => ipcRenderer.removeListener('plugin:conversion:watch-change', handler);
   },
   deleteFile: (filePath: string) => ipcRenderer.invoke('delete-file', filePath),
   deleteDir: (dirPath: string) => ipcRenderer.invoke('delete-dir', dirPath),
   onConvertProgress: (cb: (result: ConvertResult) => void) => {
     const handler = (_e: any, r: ConvertResult) => cb(r);
-    ipcRenderer.on('convert-progress', handler);
-    return () => ipcRenderer.removeListener('convert-progress', handler);
+    ipcRenderer.on('plugin:conversion:convert-progress', handler);
+    return () => ipcRenderer.removeListener('plugin:conversion:convert-progress', handler);
   },
 
   // Dock
@@ -226,5 +227,7 @@ contextBridge.exposeInMainWorld('cham', {
     call: (pluginId: string, channel: string, ...args: any[]) =>
       ipcRenderer.invoke(`plugin:${pluginId}:${channel}`, ...args),
     isActive: (pluginId: string) => ipcRenderer.invoke('plugin:isActive', pluginId),
+    emitHook: (hookName: string, ...args: any[]) =>
+      ipcRenderer.invoke('plugin:emitHook', hookName, ...args),
   },
 } satisfies ChamAPI);

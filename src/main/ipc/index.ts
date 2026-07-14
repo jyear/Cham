@@ -1,32 +1,25 @@
 import { type BrowserWindow } from 'electron';
 import { registerWindowHandlers } from './window';
 import { registerFileHandlers } from './files';
-import { registerConversionHandlers } from './conversion';
-import { registerWatchHandlers } from './watch';
 import { registerFileOpsHandlers } from './fileOps';
-import { registerFormatOptionsHandlers } from './formatOptions';
-import { registerCacheHandlers } from './cache';
 import { registerSettingsHandlers } from './settings';
 import { registerUpdateHandlers } from './update';
 import { registerBackgroundHandlers } from './backgrounds';
 import { registerDockHandlers } from './dock';
 import { registerPluginHandlers } from './plugin';
 
-export { stopWatcher } from './watch';
-export { destroyConversionPool } from './conversion';
-
 /**
- * Register all IPC handlers. Call once during app startup.
+ * Register global IPC handlers (not owned by a plugin).
+ *
+ * Conversion-related handlers (convert-image, watch-start, etc.) are
+ * now registered by the Conversion builtin plugin via PluginMainApi.
+ *
  * @param getMainWindow — getter that returns the current main BrowserWindow (may be null)
  */
 export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): void {
   registerWindowHandlers(getMainWindow);
   registerFileHandlers(getMainWindow);
-  registerConversionHandlers(getMainWindow);
-  registerWatchHandlers(getMainWindow);
   registerFileOpsHandlers(getMainWindow);
-  registerFormatOptionsHandlers();
-  registerCacheHandlers();
   registerSettingsHandlers();
   registerUpdateHandlers(getMainWindow);
   registerBackgroundHandlers(getMainWindow);

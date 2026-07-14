@@ -112,6 +112,7 @@ declare global {
       listItems: (pluginId: string) => Promise<{ success: boolean; items?: Array<{ key: string; value: string }>; error?: string }>;
       call: (pluginId: string, channel: string, ...args: any[]) => Promise<any>;
       isActive: (pluginId: string) => Promise<{ success: boolean; active: boolean; error?: string }>;
+      emitHook: (hookName: string, ...args: any[]) => Promise<{ success: boolean; error?: string }>;
     };
   }
 
