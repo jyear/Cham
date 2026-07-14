@@ -533,6 +533,81 @@ api.log.error('Failed to process:', err.message);
 
 输出格式：`[pluginId] 消息内容`
 
+### Push 事件
+
+向渲染进程推送事件（非请求-响应模式）：
+
+```javascript
+api.sendEvent('watch-change', { event: 'add', file: { path, name, size, ext } });
+```
+
+实际 channel 为 `plugin:<pluginId>:watch-change`，渲染进程通过 `window.cham.onWatchChange(cb)` 订阅。
+
+### Hook 系统（跨插件通信）
+
+插件间通过 pub/sub 钩子解耦通信，无需相互依赖：
+
+#### 注册钩子
+
+```javascript
+module.exports = function(api) {
+  // timing: 'startup' (默认) — 仅在 app 启动完毕后触发，刚安装的插件不影响
+  // timing: 'install' — 安装后立即生效，无需重启
+  api.registerHook('cache:clear', async () => {
+    api.fs.remove('thumbnails');         // 清空本地缓存
+    api.db.exec('DELETE FROM plugin_mydata'); // 清空数据库缓存
+    api.log.info('My cache cleared');
+  }, 'startup');
+
+  // 另一个 hook — 安装即生效
+  api.registerHook('file:imported', async (filePath) => {
+    api.log.info(`File imported: ${filePath}`);
+  }, 'install');
+};
+```
+
+**`registerHook(hookName, handler, timing?)`**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| `hookName` | `string` | 钩子名称（如 `'cache:clear'`） |
+| `handler` | `(...args: any[]) => Promise<void> \| void` | 钩子回调 |
+| `timing` | `'startup' \| 'install'` | 默认 `'startup'`。`'startup'` 仅在 app 启动完毕后触发（刚安装的插件下次重启生效）；`'install'` 安装后立即生效 |
+
+#### 触发钩子
+
+**主进程：**
+```javascript
+api.emitHook('cache:clear');
+api.emitHook('file:imported', '/path/to/file.png');
+```
+
+**渲染进程：**
+```javascript
+await window.cham.plugin.emitHook('cache:clear');
+```
+
+**触发逻辑（host 自动判断）：**
+
+```
+emitHook('cache:clear')
+  │
+  └─ 遍历已注册的 handlers，按 timing 过滤：
+       ├─ timing === 'install'  → ✅ 总是执行
+       └─ timing === 'startup'  → 检查 startupComplete 标志
+            ├─ true  → ✅ app 已启动 → 执行
+            └─ false → ❌ 还在启动中 → 跳过
+```
+
+- 一个 handler 抛出异常不会阻塞其他 handler（错误被捕获并打印日志）
+- 插件卸载时，其注册的 hooks 自动移除
+
+#### 内置钩子
+
+| 钩子名 | 触发时机 | 参数 | 说明 |
+|--------|---------|------|------|
+| `cache:clear` | 用户在 Settings 点击"清空缓存" | 无 | 插件应清空自己的缓存数据 |
+
 ---
 
 ## 共享依赖
@@ -612,3 +687,4 @@ module.exports = function(api) {
 | **IPC** | 插件自定义 handler 自动前缀 `plugin:<id>:` 防冲突；dangerous IPC handler 加路径白名单 |
 | **窗口隔离** | React Error Boundary 单窗口崩溃不影响其他；`useScopedWindowActions` 阻止跨窗口操作 |
 | **KV 存储** | `usePluginStorage` hook 自动绑定 pluginId，阻止跨插件读取 |
+| **Hook 系统** | register 时声明 timing；startup 钩子仅在启动后触发；卸载时自动移除 |

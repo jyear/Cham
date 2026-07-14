@@ -2,25 +2,15 @@ import { ipcMain, app, type BrowserWindow } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
 import { getFileHash } from '../format';
-
-/**
- * Validate that a path is within an allowed directory.
- * Prevents path traversal attacks (../../../etc/passwd).
- */
-function isSafePath(filePath: string): boolean {
-  const normalized = path.normalize(filePath);
-  const allowedRoots = [app.getPath('userData'), app.getPath('temp')];
-  return allowedRoots.some((root) => {
-    const rootNorm = path.normalize(root) + path.sep;
-    return normalized.startsWith(rootNorm);
-  });
-}
+import { isSafePath } from '../../shared/utils/pathUtils';
+import { getMimeType } from '../../shared/utils/mime';
 
 export function registerFileOpsHandlers(getMainWindow: () => BrowserWindow | null): void {
   // Delete a file (used by watch mode to clean up output)
   ipcMain.handle('delete-file', async (_event, filePath: string) => {
     try {
-      if (!isSafePath(filePath)) {
+      const safeRoots = [app.getPath('userData'), app.getPath('temp')];
+      if (!isSafePath(filePath, safeRoots)) {
         return { success: false, error: 'Path not allowed' };
       }
       if (fs.existsSync(filePath)) {
@@ -37,7 +27,8 @@ export function registerFileOpsHandlers(getMainWindow: () => BrowserWindow | nul
   // Delete a directory recursively (used by watch mode to clean up output)
   ipcMain.handle('delete-dir', async (_event, dirPath: string) => {
     try {
-      if (!isSafePath(dirPath)) {
+      const safeRoots = [app.getPath('userData'), app.getPath('temp')];
+      if (!isSafePath(dirPath, safeRoots)) {
         return { success: false, error: 'Path not allowed' };
       }
       if (fs.existsSync(dirPath)) {
@@ -65,17 +56,8 @@ export function registerFileOpsHandlers(getMainWindow: () => BrowserWindow | nul
   ipcMain.handle('read-image', async (_event, filePath: string) => {
     try {
       const data = fs.readFileSync(filePath);
-      const ext = path.extname(filePath).toLowerCase();
-      const mimeMap: Record<string, string> = {
-        '.png': 'image/png',
-        '.jpg': 'image/jpeg',
-        '.jpeg': 'image/jpeg',
-        '.gif': 'image/gif',
-        '.webp': 'image/webp',
-        '.bmp': 'image/bmp',
-        '.tiff': 'image/tiff',
-      };
-      const mime = mimeMap[ext] || 'image/png';
+      const ext = path.extname(filePath);
+      const mime = getMimeType(ext);
       return { success: true, dataUrl: `data:${mime};base64,${data.toString('base64')}` };
     } catch (error: any) {
       return { success: false, error: error.message };

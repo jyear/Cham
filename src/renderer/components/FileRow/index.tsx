@@ -1,5 +1,8 @@
 import React from 'react';
 import Thumbnail from '@/components/Thumbnail';
+import { formatSize } from '@shared/utils/formatSize';
+// Re-export for backward compatibility (SourcePanel, OutputPanel import from here)
+export { formatSize };
 import s from './index.module.css';
 
 export interface FileItem {
@@ -23,14 +26,6 @@ interface Props {
   action?: React.ReactNode;
   /** Override size display text */
   sizeText?: string;
-}
-
-export function formatSize(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
 export default function FileRow({ file, thumbPath, displayPath, variant, badge, action, sizeText }: Props) {

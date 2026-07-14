@@ -1,12 +1,12 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import * as https from 'https';
 import { app } from 'electron';
 import { getDb } from '../db/connection';
 import { insertManifest, deleteManifest, clearStoreItems } from '../db/plugins';
 import type { PluginManifest, DbTableDeclaration } from '../../shared/plugin/types';
 import { buildTableSQL } from '../../shared/plugin/types';
 import { pluginHost } from './host';
+import { httpGet, downloadFile } from '../utils/http';
 
 /** Return the base directory where store plugins live */
 export function getPluginsDir(): string {
@@ -17,48 +17,6 @@ export function getPluginsDir(): string {
 /** Resolve the install directory for a specific plugin */
 export function getPluginDir(pluginId: string): string {
   return path.join(getPluginsDir(), pluginId);
-}
-
-// ── Helpers ──
-
-function httpGet(url: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    https
-      .get(url, (res) => {
-        if (res.statusCode === 301 || res.statusCode === 302) {
-          httpGet(res.headers.location!).then(resolve, reject);
-          return;
-        }
-        if (res.statusCode !== 200) {
-          reject(new Error(`HTTP ${res.statusCode}`));
-          return;
-        }
-        let data = '';
-        res.on('data', (chunk) => (data += chunk));
-        res.on('end', () => resolve(data));
-      })
-      .on('error', reject);
-  });
-}
-
-function downloadFile(url: string, dest: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const dir = path.dirname(dest);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-
-    https
-      .get(url, (res) => {
-        if (res.statusCode === 301 || res.statusCode === 302) {
-          downloadFile(res.headers.location!, dest).then(resolve, reject);
-          return;
-        }
-        const file = fs.createWriteStream(dest);
-        res.pipe(file);
-        file.on('finish', () => { file.close(); resolve(); });
-        file.on('error', reject);
-      })
-      .on('error', reject);
-  });
 }
 
 // ── Table management ──

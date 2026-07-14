@@ -124,6 +124,11 @@ export interface ChamAPI {
     call: (pluginId: string, channel: string, ...args: any[]) => Promise<any>;
     isActive: (pluginId: string) => Promise<{ success: boolean; active: boolean; error?: string }>;
     emitHook: (hookName: string, ...args: any[]) => Promise<{ success: boolean; error?: string }>;
+    loadI18n: (pluginId: string) => Promise<{
+      success: boolean;
+      translations?: Record<string, Record<string, string>>;
+      error?: string;
+    }>;
   };
 }
 
@@ -229,5 +234,7 @@ contextBridge.exposeInMainWorld('cham', {
     isActive: (pluginId: string) => ipcRenderer.invoke('plugin:isActive', pluginId),
     emitHook: (hookName: string, ...args: any[]) =>
       ipcRenderer.invoke('plugin:emitHook', hookName, ...args),
+    loadI18n: (pluginId: string) =>
+      ipcRenderer.invoke('plugin:loadI18n', pluginId),
   },
 } satisfies ChamAPI);

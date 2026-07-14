@@ -1,4 +1,6 @@
 import { ipcMain, type BrowserWindow } from 'electron';
+import * as fs from 'fs';
+import * as path from 'path';
 import {
   listManifests,
   getStoreItem,
@@ -137,6 +139,35 @@ export function registerPluginHandlers(_getMainWindow: () => BrowserWindow | nul
   ipcMain.handle('plugin:isActive', async (_event, pluginId: string) => {
     try {
       return { success: true, active: pluginHost.isActive(pluginId) };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Load plugin i18n files
+  ipcMain.handle('plugin:loadI18n', async (_event, pluginId: string) => {
+    try {
+      const record = (listManifests() as any[]).find(
+        (p: any) => (p.manifest as any).id === pluginId,
+      );
+      if (!record) return { success: false, error: 'Plugin not found' };
+
+      const i18nDir = path.join(record.installPath, 'i18n');
+      const translations: Record<string, Record<string, string>> = {};
+
+      // Try loading en.json and zh.json from the plugin's i18n directory
+      for (const lang of ['en', 'zh']) {
+        const filePath = path.join(i18nDir, `${lang}.json`);
+        if (fs.existsSync(filePath)) {
+          try {
+            translations[lang] = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+          } catch {
+            console.warn(`[plugin] Failed to parse i18n: ${filePath}`);
+          }
+        }
+      }
+
+      return { success: true, translations };
     } catch (error: any) {
       return { success: false, error: error.message };
     }

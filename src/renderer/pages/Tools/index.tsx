@@ -15,11 +15,8 @@ export default function Tools() {
   const appDefs = loadAppDefs();
 
   const handleOpenApp = (app: AppDefinition) => {
-    openApp({
-      ...app,
-      title: (t as any)[app.title] ?? app.title,
-      description: app.description ? ((t as any)[app.description] ?? app.description) : undefined,
-    });
+    // Pass raw i18n keys — translation happens at render time in AppWindow
+    openApp(app);
     navigate('/');
   };
 

@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
 import { add, getAll, setSelected, remove, type BackgroundRecord } from '../db';
+import { getMimeType } from '../../shared/utils/mime';
 
 function getBgDir(): string {
   const dir = path.join(app.getPath('userData'), 'backgrounds');
@@ -14,16 +15,7 @@ function getBgDir(): string {
 
 function fileToDataUrl(filePath: string): string {
   const data = fs.readFileSync(filePath);
-  const ext = path.extname(filePath).toLowerCase();
-  const mimeMap: Record<string, string> = {
-    '.png': 'image/png',
-    '.jpg': 'image/jpeg',
-    '.jpeg': 'image/jpeg',
-    '.gif': 'image/gif',
-    '.webp': 'image/webp',
-    '.bmp': 'image/bmp',
-  };
-  const mime = mimeMap[ext] || 'image/png';
+  const mime = getMimeType(path.extname(filePath));
   return `data:${mime};base64,${data.toString('base64')}`;
 }
 

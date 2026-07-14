@@ -8,7 +8,7 @@ import s from './index.module.css';
 
 function AppsIcon() {
   return (
-    <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+    <svg width="36" height="36" viewBox="0 0 28 28" fill="none">
       {/* Outer window frame */}
       <rect x="3" y="4" width="22" height="20" rx="3" fill="#5b9bd5" />
       {/* Title bar */}
@@ -26,7 +26,7 @@ function AppsIcon() {
 
 function StoreIcon() {
   return (
-    <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+    <svg width="36" height="36" viewBox="0 0 28 28" fill="none">
       {/* Storefront roof */}
       <path d="M3 10h22l-2 14H5L3 10z" fill="#f0a058" />
       {/* Roof top accent */}
@@ -159,9 +159,9 @@ export default function FooterNav() {
             key={item.key}
             className={`${s.dockItem} ${isActive(item) ? s.active : ''}`}
             onClick={() => navigate(item.route)}
+            title={item.label}
           >
-            <span className={s.iconWrap}>{item.icon}</span>
-            <span className={s.label}>{item.label}</span>
+            {item.icon}
           </button>
         ))}
 
@@ -183,11 +183,10 @@ export default function FooterNav() {
             >
               <span
                 className={s.appIcon}
-                style={{ background: win.color, opacity: win.mode === WindowMode.Minimized ? 0.5 : 1 }}
+                style={{ background: win.color, opacity: win.mode === WindowMode.Minimized ? 0.45 : 1 }}
               >
-                <Icon type={win.icon} size={18} color="#fff" />
+                <Icon type={win.icon} size={22} color="#fff" />
               </span>
-              <span className={s.label}>{win.title}</span>
             </button>
           </Tooltip>
         ))}
@@ -210,9 +209,8 @@ export default function FooterNav() {
               onClick={() => handlePinnedClick(app)}
             >
               <span className={s.appIcon} style={{ background: app.color, opacity: 0.45 }}>
-                <Icon type={app.icon} size={18} color="#fff" />
+                <Icon type={app.icon} size={22} color="#fff" />
               </span>
-              <span className={s.label}>{app.title}</span>
             </button>
           </Tooltip>
         ))}

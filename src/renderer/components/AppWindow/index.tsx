@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useWindows } from '@/contexts/WindowContext';
+import { useT } from '@/i18n';
 import { WindowMode } from './types';
 import { useWindowInteraction } from './useWindowInteraction';
 import PluginErrorBoundary from '@/components/PluginErrorBoundary';
@@ -41,10 +42,12 @@ export default function AppWindow({ win }: Props) {
 
   const dockOffset = useDockAnimation(win.appKey, { x: layout.left, y: layout.top }, { w: layout.width, h: layout.height });
 
+  const { t } = useT();
   const [showInfo, setShowInfo] = useState(false);
 
   const isMinimized = mode === WindowMode.Minimized;
   const isMaximized = mode === WindowMode.Maximized;
+  const displayTitle = (t as any)[win.title] ?? win.title;
 
   return (
     <motion.div
@@ -74,7 +77,7 @@ export default function AppWindow({ win }: Props) {
         onDoubleClick={() => !win.unresizable && maximizeApp(win.id)}
       >
         <TrafficLights winId={win.id} unresizable={win.unresizable} />
-        <span className={s.titleText}>{win.title}</span>
+        <span className={s.titleText}>{displayTitle}</span>
         {win.description && (
           <button className={s.helpBtn} title="About this app" onClick={() => setShowInfo(true)}>
             <Icon type="help" size={14} />

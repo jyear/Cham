@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback, useEffect } from 'react';
 import { useWindows, type DesktopBounds } from '@/contexts/WindowContext';
 import { WindowMode, type ResizeDirection, type Point, type Size, type Rect } from './types';
 
@@ -37,6 +37,20 @@ export function useWindowInteraction(opts: UseWindowInteractionOpts) {
   sizeRef.current = size;
   const desktopRef = useRef(desktopBounds);
   desktopRef.current = desktopBounds;
+
+  // Clamp position when desktop bounds shrink (e.g. main window un-maximized)
+  useEffect(() => {
+    if (!desktopBounds) return;
+    const { w, h } = sizeRef.current;
+    setPos((p) => {
+      const maxX = desktopBounds.left + desktopBounds.width - w;
+      const maxY = desktopBounds.top + desktopBounds.height - h;
+      const nx = clamp(p.x, desktopBounds.left, Math.max(desktopBounds.left, maxX));
+      const ny = clamp(p.y, desktopBounds.top, Math.max(desktopBounds.top, maxY));
+      if (nx !== p.x || ny !== p.y) return { x: nx, y: ny };
+      return p;
+    });
+  }, [desktopBounds]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Drag (title bar) ──
   const onTitleBarPointerDown = useCallback(

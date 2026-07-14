@@ -73,13 +73,10 @@ export default function Store() {
       minHeight: bundle.manifest.minHeight,
       Component: bundle.Component,
     };
-    openApp({
-      ...app,
-      title: (t as any)[app.title] ?? app.title,
-      description: app.description ? ((t as any)[app.description] ?? app.description) : undefined,
-    });
+    // Pass raw i18n keys — translation happens at render time in AppWindow
+    openApp(app);
     navigate('/');
-  }, [openApp, navigate, t]);
+  }, [openApp, navigate]);
 
   const installedIds = new Set(bundles.map((b) => b.manifest.id));
 

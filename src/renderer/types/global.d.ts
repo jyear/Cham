@@ -113,6 +113,11 @@ declare global {
       call: (pluginId: string, channel: string, ...args: any[]) => Promise<any>;
       isActive: (pluginId: string) => Promise<{ success: boolean; active: boolean; error?: string }>;
       emitHook: (hookName: string, ...args: any[]) => Promise<{ success: boolean; error?: string }>;
+      loadI18n: (pluginId: string) => Promise<{
+        success: boolean;
+        translations?: Record<string, Record<string, string>>;
+        error?: string;
+      }>;
     };
   }
 

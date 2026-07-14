@@ -1,4 +1,5 @@
 import type { PluginManifest, PluginBundle } from '@shared/plugin/types';
+import { registerPluginI18n } from '@/i18n';
 
 // Built-in plugins — statically imported so webpack bundles them
 import conversionManifest from './builtin/conversion/manifest';
@@ -62,10 +63,34 @@ class PluginRegistry {
     // Load store plugins from the database
     await this.loadInstalledPlugins();
 
+    // Load i18n translations for all store plugins
+    await this.loadPluginI18n();
+
     this._initialized = true;
     console.log(
       `[PluginRegistry] Initialized: ${this.builtins.size} builtin, ${this.installed.size} installed`,
     );
+  }
+
+  /**
+   * Load i18n translations from all installed store plugins and
+   * register them with the i18n system so names/descriptions display
+   * in the current language.
+   */
+  private async loadPluginI18n(): Promise<void> {
+    if (!window.cham) return;
+
+    for (const [pluginId] of this.installed) {
+      try {
+        const result = await window.cham.plugin.loadI18n(pluginId);
+        if (result.success && result.translations) {
+          registerPluginI18n(result.translations);
+          console.log(`[PluginRegistry] Loaded i18n for "${pluginId}"`);
+        }
+      } catch (err: any) {
+        console.warn(`[PluginRegistry] Failed to load i18n for "${pluginId}": ${err.message}`);
+      }
+    }
   }
 
   /**
