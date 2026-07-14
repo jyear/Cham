@@ -1,4 +1,7 @@
+require('./scripts/load-env')('.env.dev');
+
 const path = require('path');
+const webpack = require('webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 module.exports = (_env, argv) => {
@@ -43,6 +46,11 @@ module.exports = (_env, argv) => {
       new HtmlWebpackPlugin({
         template: './src/renderer/index.html',
       }),
+      new webpack.DefinePlugin({
+        'process.env.CHAM_STORE_URL': JSON.stringify(
+          process.env.CHAM_STORE_URL || 'https://cham-download.oss-cn-beijing.aliyuncs.com/store',
+        ),
+      }),
     ],
     devServer: isProd
       ? undefined
@@ -53,5 +61,8 @@ module.exports = (_env, argv) => {
             'Access-Control-Allow-Origin': '*',
           },
         },
+    ignoreWarnings: [
+      /Critical dependency: the request of a dependency is an expression/,
+    ],
   };
 };

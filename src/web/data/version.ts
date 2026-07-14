@@ -1,5 +1,6 @@
-const VERSION_URL = 'https://cham-download.oss-cn-beijing.aliyuncs.com/version.json';
-const DOWNLOAD_BASE = 'https://cham-download.oss-cn-beijing.aliyuncs.com';
+const UPDATE_URL = process.env.CHAM_UPDATE_URL || 'https://cham-download.oss-cn-beijing.aliyuncs.com';
+const VERSION_URL = `${UPDATE_URL}/version.json`;
+const DOWNLOAD_BASE = UPDATE_URL;
 
 export interface VersionFile {
   /** File name, e.g. "Cham-Setup-0.0.2.exe" */

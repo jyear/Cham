@@ -10,11 +10,15 @@ export type IconType =
   | 'file'
   | 'settings'
   | 'info'
+  | 'help'
   | 'bell'
   | 'loading'
   | 'minimize'
   | 'maximize'
-  | 'restore';
+  | 'restore'
+  | 'home'
+  | 'apps'
+  | 'image';
 
 interface Props {
   type: IconType;
@@ -97,6 +101,17 @@ const paths: Record<IconType, { viewBox: string; path: React.ReactNode }> = {
     ),
   },
 
+  help: {
+    viewBox: '0 0 24 24',
+    path: (
+      <>
+        <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" strokeWidth="2" />
+        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        <circle cx="12" cy="17" r="1" fill="currentColor" />
+      </>
+    ),
+  },
+
   bell: {
     viewBox: '0 0 24 24',
     path: (
@@ -147,6 +162,50 @@ const paths: Record<IconType, { viewBox: string; path: React.ReactNode }> = {
       <>
         <rect x="2.5" y="1" width="8" height="8" rx="0.5" fill="none" stroke="currentColor" strokeWidth="1" />
         <rect x="1" y="2.5" width="8" height="8" rx="0.5" fill="none" stroke="currentColor" strokeWidth="1" />
+      </>
+    ),
+  },
+
+  home: {
+    viewBox: '0 0 24 24',
+    path: (
+      <path
+        d="M3 10l9-7 9 7v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    ),
+  },
+
+  apps: {
+    viewBox: '0 0 24 24',
+    path: (
+      <>
+        <rect x="3" y="3" width="8" height="8" rx="1.5" fill="none" stroke="currentColor" strokeWidth="2" />
+        <rect x="13" y="3" width="8" height="8" rx="1.5" fill="none" stroke="currentColor" strokeWidth="2" />
+        <rect x="3" y="13" width="8" height="8" rx="1.5" fill="none" stroke="currentColor" strokeWidth="2" />
+        <rect x="13" y="13" width="8" height="8" rx="1.5" fill="none" stroke="currentColor" strokeWidth="2" />
+      </>
+    ),
+  },
+
+  image: {
+    viewBox: '0 0 24 24',
+    path: (
+      <>
+        <rect x="3" y="3" width="18" height="18" rx="3" fill="none" stroke="currentColor" strokeWidth="2" />
+        <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" />
+        <path
+          d="M3 16l5-5 4 4 3-3 6 6"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
       </>
     ),
   },

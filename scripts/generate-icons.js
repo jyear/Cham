@@ -10,7 +10,7 @@ const fs = require('fs');
 const path = require('path');
 
 const SRC = path.join(__dirname, '..', 'icons', 'log.png');
-const OUT_DIR = path.join(__dirname, '..', 'assets');
+const OUT_DIR = path.join(__dirname, '..', 'assets', 'icons');
 const SIZES = [16, 24, 32, 48, 64, 128, 256];
 const COLOR_TOLERANCE = 50;
 
@@ -78,7 +78,7 @@ async function main() {
   // Verify
   const m = await sharp(mainIcon).metadata();
   console.log(`\n✓ Done. icon.png = ${m.width}x${m.height}.`);
-  console.log('Run: npx png-to-ico assets/icon-256x256.png > assets/icon.ico');
+  console.log('Run: npx png-to-ico assets/icons/icon-256x256.png > assets/icons/icon.ico');
 }
 
 main().catch(e => { console.error(e); process.exit(1); });

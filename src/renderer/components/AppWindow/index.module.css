@@ -1,0 +1,195 @@
+.window {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  border-radius: 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  transition: border-radius 0.2s;
+}
+
+.window.maximized {
+  border-radius: 0;
+  border: none;
+}
+
+/* Title bar */
+.titleBar {
+  display: flex;
+  align-items: center;
+  height: 38px;
+  padding: 0 12px;
+  background: var(--bg-secondary);
+  cursor: grab;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.titleBar:active {
+  cursor: grabbing;
+}
+
+.trafficLights {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.light {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: filter 0.15s;
+}
+
+.light::before {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+}
+
+.close::before   { background: #ff5f57; }
+.minimize::before { background: #febc2e; }
+.maximize::before { background: #28c840; }
+
+.light:hover {
+  filter: brightness(0.85);
+}
+
+.lightIcon {
+  position: relative;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+.trafficLights:hover .lightIcon {
+  opacity: 1;
+}
+
+.titleIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  flex-shrink: 0;
+  margin-left: 10px;
+}
+
+.titleText {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  margin-left: 8px;
+}
+
+.helpBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-secondary);
+  cursor: pointer;
+  margin-left: auto;
+  transition: background 0.15s, color 0.15s;
+}
+
+.helpBtn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text);
+}
+
+/* ── AppInfo modal ── */
+
+.appInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 8px 0;
+}
+
+.appInfoIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  flex-shrink: 0;
+  margin-bottom: 12px;
+}
+
+.appInfoTitle {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 26px;
+}
+
+.appInfoDesc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* Content */
+.content {
+  position: relative;
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* Resize handles */
+.handle {
+  position: absolute;
+  z-index: 100;
+}
+
+.handleN, .handleS {
+  left: 0;
+  right: 0;
+  height: 4px;
+  cursor: ns-resize;
+}
+.handleN { top: 0; }
+.handleS { bottom: 0; }
+
+.handleE, .handleW {
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  cursor: ew-resize;
+}
+.handleE { right: 0; }
+.handleW { left: 0; }
+
+.handleNE, .handleNW, .handleSE, .handleSW {
+  width: 10px;
+  height: 10px;
+}
+.handleNE { top: 0; right: 0; cursor: nesw-resize; }
+.handleNW { top: 0; left: 0; cursor: nwse-resize; }
+.handleSE { bottom: 0; right: 0; cursor: nwse-resize; }
+.handleSW { bottom: 0; left: 0; cursor: nesw-resize; }

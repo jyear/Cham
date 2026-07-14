@@ -45,6 +45,8 @@ const zh = {
 
   // Footer
   footer: '基于 sharp 构建 · 源自 cham-cli',
+  keepInDock: '固定在导航栏',
+  removeFromDock: '取消固定在导航栏',
 
   // Settings page
   settingsTitle: '设置',
@@ -104,6 +106,36 @@ const zh = {
   selectBackgroundImage: '选择图片...',
   resetBackground: '重置',
   noBackground: '无背景图片',
+
+  // Home
+  home: '首页',
+  welcome: '欢迎',
+
+  // Tools
+  tools: '应用',
+  toolsTitle: '应用',
+  conversionTool: '图片转换',
+  conversionToolDesc: '将图片转换为 WebP / AVIF 格式',
+
+  // Store
+  store: '商店',
+  storeInstalled: '已安装',
+  storeDiscover: '发现',
+  storeInstall: '安装',
+  storeUninstall: '卸载',
+  storeUpdating: '更新中...',
+  storeInstalling: '安装中...',
+  storeInstallSuccess: '安装成功',
+  storeInstallFailed: '安装失败',
+  storeUninstallConfirm: '确认移除该插件？',
+  storeVersion: (v: string) => `v${v}`,
+  storeAuthor: (a: string) => `作者: ${a}`,
+  storeBuiltinBadge: '内置',
+  storeStoreBadge: '商店',
+  storeNoPlugins: '暂无已安装插件',
+  storeBrowseHint: '切换到「发现」标签页浏览可用插件',
+  storeNoStorePlugins: '暂无可用插件',
+  storeRefresh: '刷新',
 
   // Misc
   minimize: '最小化',

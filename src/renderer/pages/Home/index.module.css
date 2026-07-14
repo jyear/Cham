@@ -1,9 +1,12 @@
-.layout {
+.container {
   flex: 1;
-  display: grid;
-  grid-template-columns: calc((100% - clamp(300px, 20%, 20%) - 20px) / 2) clamp(300px, 20%, 20%) calc((100% - clamp(300px, 20%, 20%) - 20px) / 2);
-  gap: 10px;
-  min-height: 0;
-  overflow: hidden;
-  padding-top: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.welcome {
+  font-size: 2rem;
+  color: var(--text);
+  font-weight: 600;
 }

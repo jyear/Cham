@@ -1,0 +1,9 @@
+.layout {
+  flex: 1;
+  display: grid;
+  grid-template-columns: calc((100% - clamp(300px, 20%, 20%) - 20px) / 2) clamp(300px, 20%, 20%) calc((100% - clamp(300px, 20%, 20%) - 20px) / 2);
+  gap: 10px;
+  min-height: 0;
+  overflow: hidden;
+  padding: 20px;
+}

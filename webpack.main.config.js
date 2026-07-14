@@ -1,4 +1,7 @@
+require('./scripts/load-env')('.env.dev');
+
 const path = require('path');
+const webpack = require('webpack');
 
 module.exports = (_env, argv) => {
   const isProd = argv.mode === 'production';
@@ -9,6 +12,7 @@ module.exports = (_env, argv) => {
     entry: {
       index: './src/main/index.ts',
       preload: './src/main/preload/index.ts',
+      worker: './src/main/worker.ts',
     },
     target: 'electron-main',
     module: {
@@ -31,6 +35,16 @@ module.exports = (_env, argv) => {
       filename: '[name].js',
       path: path.resolve(__dirname, 'dist/main'),
     },
+    plugins: [
+      new webpack.DefinePlugin({
+        'process.env.CHAM_UPDATE_URL': JSON.stringify(
+          process.env.CHAM_UPDATE_URL || 'https://cham-download.oss-cn-beijing.aliyuncs.com',
+        ),
+        'process.env.CHAM_STORE_URL': JSON.stringify(
+          process.env.CHAM_STORE_URL || 'https://cham-download.oss-cn-beijing.aliyuncs.com/store',
+        ),
+      }),
+    ],
     externals: {
       sharp: 'commonjs sharp',
       'better-sqlite3': 'commonjs better-sqlite3',

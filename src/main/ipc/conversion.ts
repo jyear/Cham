@@ -1,11 +1,38 @@
 import { ipcMain, type BrowserWindow } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
-import { convertImage, getFileHash, type OutputFormat } from '../format';
+import { type OutputFormat, CONVERTIBLE_EXTENSIONS } from '../format';
 import { makeSourceId, findBySourceId, upsertConversion } from '../db';
+import { WorkerPool } from '../worker-pool';
+
+// ── Singleton pool ──
+
+let pool: WorkerPool | null = null;
+
+function getPool(): WorkerPool {
+  if (!pool) {
+    pool = new WorkerPool();
+  }
+  return pool;
+}
+
+export function destroyConversionPool(): void {
+  if (pool) {
+    pool.destroy();
+    pool = null;
+  }
+}
+
+// ── Helpers ──
+
+function isConvertibleExt(filePath: string): boolean {
+  const ext = path.extname(filePath).toLowerCase();
+  return CONVERTIBLE_EXTENSIONS.includes(ext);
+}
+
+// ── Single-file conversion ──
 
 export function registerConversionHandlers(getMainWindow: () => BrowserWindow | null): void {
-  // Convert a single image (with SQLite caching)
   ipcMain.handle(
     'convert-image',
     async (
@@ -17,12 +44,12 @@ export function registerConversionHandlers(getMainWindow: () => BrowserWindow | 
         keepName?: boolean;
         copyNonConvertible?: boolean;
         format?: OutputFormat;
-      }
+        options?: Record<string, any>;
+      },
     ) => {
       try {
         const fmt: OutputFormat = params.format ?? 'webp';
-        const ext = path.extname(params.inputPath).toLowerCase();
-        const isConvertible = ['.png', '.jpg', '.jpeg', '.gif', '.tiff', '.bmp'].includes(ext);
+        const quality = params.quality ?? 100;
 
         const outputName = params.keepName
           ? path.basename(params.inputPath)
@@ -30,8 +57,8 @@ export function registerConversionHandlers(getMainWindow: () => BrowserWindow | 
 
         const outputPath = path.join(params.outputDir, outputName);
 
-        // Non-convertible files: copy instead of convert
-        if (!isConvertible) {
+        // Non-convertible → copy inline (trivial I/O, no worker needed)
+        if (!isConvertibleExt(params.inputPath)) {
           if (params.copyNonConvertible) {
             const dirname = path.dirname(outputPath);
             if (!fs.existsSync(dirname)) {
@@ -43,35 +70,33 @@ export function registerConversionHandlers(getMainWindow: () => BrowserWindow | 
           return { success: false, error: 'File type not convertible and copy is disabled' };
         }
 
-        // 1. Calculate input file hash → source_id
-        const inputHash = await getFileHash(params.inputPath);
+        // ── Cache lookup (main thread — fast SQLite) ──
+        const { hash: inputHash } = await getPool().execute({
+          type: 'hash',
+          filePath: params.inputPath,
+        });
+
         const sourceId = makeSourceId(params.inputPath, inputHash);
-
-        const quality = params.quality ?? 100;
-
-        // 2. Look up cache record by source_id (unique)
         const record = findBySourceId(sourceId);
 
-        // 3. Compare stored settings with current settings
         if (
           record &&
           record.format === fmt &&
           record.quality === quality &&
           record.output_path === outputPath
         ) {
-          // 3a. Settings match — verify output file integrity
           if (fs.existsSync(record.output_path)) {
-            const existingOutputHash = await getFileHash(record.output_path);
-            if (existingOutputHash === record.output_hash) {
-              // Output file exists and hash matches — genuine cache hit
+            const { hash: existingHash } = await getPool().execute({
+              type: 'hash',
+              filePath: record.output_path,
+            });
+            if (existingHash === record.output_hash) {
               console.log('[convert] SKIP (cached):', params.inputPath);
               return { success: true, outputPath: record.output_path, cached: true };
             }
           }
-          // Output file missing or hash mismatch
           console.log('[convert] RE-CONVERT (stale output):', params.inputPath);
         } else if (record) {
-          // Settings changed — re-convert with new settings
           console.log(
             '[convert] RE-CONVERT (params changed):',
             params.inputPath,
@@ -79,26 +104,34 @@ export function registerConversionHandlers(getMainWindow: () => BrowserWindow | 
           );
         }
 
-        // 4. Convert the image
-        await convertImage(params.inputPath, outputPath, {
-          quality,
-          format: fmt,
-          extraOptions: (params as any).options ?? {},
+        // ── Convert in worker (offloaded from main thread) ──
+        const { outputSize } = await getPool().execute({
+          type: 'convert',
+          inputPath: params.inputPath,
+          outputPath,
+          options: {
+            quality,
+            format: fmt,
+            ...params.options,
+          },
         });
 
-        // 5. Calculate output hash and upsert database
-        const outputHash = await getFileHash(outputPath);
-        const outputSize = fs.statSync(outputPath).size;
+        // ── Cache result (main thread) ──
+        const { hash: outputHash } = await getPool().execute({
+          type: 'hash',
+          filePath: outputPath,
+        });
         upsertConversion(sourceId, fmt, quality, outputPath, outputHash);
 
         return { success: true, outputPath, outputSize, cached: false };
       } catch (error: any) {
         return { success: false, error: error.message };
       }
-    }
+    },
   );
 
-  // Convert multiple images (with SQLite caching)
+  // ── Batch conversion ──
+
   ipcMain.handle(
     'convert-images',
     async (
@@ -110,142 +143,147 @@ export function registerConversionHandlers(getMainWindow: () => BrowserWindow | 
         keepName?: boolean;
         copyNonConvertible?: boolean;
         format?: OutputFormat;
-      }
+        options?: Record<string, any>;
+      },
     ) => {
-      const results: Array<{
-        inputPath: string;
-        outputPath?: string;
-        outputSize?: number;
-        success: boolean;
-        cached?: boolean;
-        copied?: boolean;
-        error?: string;
-      }> = [];
       const fmt: OutputFormat = params.format ?? 'webp';
+      const quality = params.quality ?? 100;
+      const pool = getPool();
+      const win = getMainWindow();
+
+      // ── Phase 1: determine what each file needs ──
+      interface FilePlan {
+        file: { path: string; name: string };
+        action: 'copy' | 'skip' | 'convert';
+        outputPath: string;
+        cached?: boolean;
+      }
+
+      const plans: FilePlan[] = [];
 
       for (const file of params.files) {
-        try {
-          const ext = path.extname(file.name).toLowerCase();
-          const isConvertible = ['.png', '.jpg', '.jpeg', '.gif', '.tiff', '.bmp'].includes(ext);
+        const outputName = params.keepName
+          ? file.name
+          : file.name.replace(/\.[^.]+$/, `.${fmt}`);
+        const outputPath = path.join(params.outputDir, outputName);
 
-          const outputName = params.keepName
-            ? file.name
-            : file.name.replace(/\.[^.]+$/, `.${fmt}`);
-
-          const outputPath = path.join(params.outputDir, outputName);
-
-          // Non-convertible files: copy instead of convert
-          if (!isConvertible) {
-            if (params.copyNonConvertible) {
-              const dirname = path.dirname(outputPath);
-              if (!fs.existsSync(dirname)) {
-                fs.mkdirSync(dirname, { recursive: true });
-              }
-              fs.copyFileSync(file.path, outputPath);
-              const copySize = fs.statSync(outputPath).size;
-              const result = { inputPath: file.path, outputPath, outputSize: copySize, success: true, cached: false, copied: true };
-              results.push(result);
-              getMainWindow()?.webContents.send('convert-progress', result);
-              continue;
+        if (!isConvertibleExt(file.name)) {
+          if (params.copyNonConvertible) {
+            const dirname = path.dirname(outputPath);
+            if (!fs.existsSync(dirname)) {
+              fs.mkdirSync(dirname, { recursive: true });
             }
-            const result = {
-              inputPath: file.path,
-              success: false,
-              error: 'File type not convertible and copy is disabled',
-            };
-            results.push(result);
-            getMainWindow()?.webContents.send('convert-progress', result);
+            fs.copyFileSync(file.path, outputPath);
+            const copySize = fs.statSync(outputPath).size;
+            const result = { inputPath: file.path, outputPath, outputSize: copySize, success: true, cached: false, copied: true };
+            win?.webContents.send('convert-progress', result);
+            plans.push({ file, action: 'skip', outputPath, cached: false });
             continue;
           }
+          const result = { inputPath: file.path, success: false, error: 'File type not convertible and copy is disabled' };
+          win?.webContents.send('convert-progress', result);
+          plans.push({ file, action: 'skip', outputPath });
+          continue;
+        }
 
-          const quality = params.quality ?? 100;
+        // Check cache
+        const { hash: inputHash } = await pool.execute({ type: 'hash', filePath: file.path });
+        const sourceId = makeSourceId(file.path, inputHash);
+        const record = findBySourceId(sourceId);
 
-          // 1. Calculate input file hash → source_id
-          const inputHash = await getFileHash(file.path);
-          const sourceId = makeSourceId(file.path, inputHash);
-
-          // 2. Look up cache record by source_id (unique)
-          const record = findBySourceId(sourceId);
-
-          // 3. Compare stored settings with current settings
-          if (
-            record &&
-            record.format === fmt &&
-            record.quality === quality &&
-            record.output_path === outputPath
-          ) {
-            // 3a. Settings match — verify output file integrity
-            if (fs.existsSync(record.output_path)) {
-              const existingOutputHash = await getFileHash(record.output_path);
-              if (existingOutputHash === record.output_hash) {
-                // Output file exists and hash matches — genuine cache hit
-                console.log('[convert] SKIP (cached):', file.path);
-                const cachedSize = fs.statSync(record.output_path).size;
-                const cachedResult = {
-                  inputPath: file.path,
-                  outputPath: record.output_path,
-                  outputSize: cachedSize,
-                  success: true,
-                  cached: true,
-                };
-                results.push(cachedResult);
-                getMainWindow()?.webContents.send('convert-progress', cachedResult);
-                continue;
-              }
-            }
-            // Output file missing or hash mismatch
-            console.log('[convert] RE-CONVERT (stale output):', file.path);
-          } else if (record) {
-            // Settings changed — re-convert with new settings
-            console.log(
-              '[convert] RE-CONVERT (params changed):',
-              file.path,
-              `fmt:${record.format}→${fmt} q:${record.quality}→${quality}`,
-            );
+        if (
+          record &&
+          record.format === fmt &&
+          record.quality === quality &&
+          record.output_path === outputPath &&
+          fs.existsSync(record.output_path)
+        ) {
+          const { hash: existingHash } = await pool.execute({ type: 'hash', filePath: record.output_path });
+          if (existingHash === record.output_hash) {
+            console.log('[convert] SKIP (cached):', file.path);
+            const cachedSize = fs.statSync(record.output_path).size;
+            const cachedResult = { inputPath: file.path, outputPath: record.output_path, outputSize: cachedSize, success: true, cached: true };
+            win?.webContents.send('convert-progress', cachedResult);
+            plans.push({ file, action: 'skip', outputPath: record.output_path, cached: true });
+            continue;
           }
+        }
 
-          // 4. Convert the image
-          console.log('[convert]', file.path, '→', outputPath);
-          await convertImage(file.path, outputPath, {
-            quality,
-            format: fmt,
-            extraOptions: (params as any).options ?? {},
+        plans.push({ file, action: 'convert', outputPath });
+      }
+
+      // ── Phase 2: dispatch all conversions in parallel to the pool ──
+      const convertPlans = plans.filter((p) => p.action === 'convert');
+
+      const convertPromises = convertPlans.map((plan) =>
+        pool
+          .execute({
+            type: 'convert',
+            inputPath: plan.file.path,
+            outputPath: plan.outputPath,
+            options: { quality, format: fmt, ...params.options },
+          })
+          .then(async (convResult) => {
+            // Cache
+            const { hash: outputHash } = await pool.execute({
+              type: 'hash',
+              filePath: plan.outputPath,
+            });
+            const { hash: inputHash } = await pool.execute({
+              type: 'hash',
+              filePath: plan.file.path,
+            });
+            const sourceId = makeSourceId(plan.file.path, inputHash);
+            upsertConversion(sourceId, fmt, quality, plan.outputPath, outputHash);
+
+            const result = { inputPath: plan.file.path, outputPath: plan.outputPath, outputSize: convResult.outputSize, success: true, cached: false };
+            win?.webContents.send('convert-progress', result);
+            return result;
+          })
+          .catch((err) => {
+            const result = { inputPath: plan.file.path, success: false, error: err.message };
+            win?.webContents.send('convert-progress', result);
+            return result;
+          }),
+      );
+
+      // Await all conversions
+      const convertResults = await Promise.all(convertPromises);
+
+      // Merge results in original order
+      const results: any[] = [];
+      let ci = 0;
+      for (const plan of plans) {
+        if (plan.action === 'skip') {
+          results.push({
+            inputPath: plan.file.path,
+            outputPath: plan.outputPath,
+            success: true,
+            cached: plan.cached ?? false,
           });
-
-          // 5. Calculate output hash and upsert database
-          const outputHash = await getFileHash(outputPath);
-          const outputSize = fs.statSync(outputPath).size;
-          upsertConversion(sourceId, fmt, quality, outputPath, outputHash);
-
-          const okResult = { inputPath: file.path, outputPath, outputSize, success: true, cached: false };
-          results.push(okResult);
-          getMainWindow()?.webContents.send('convert-progress', okResult);
-        } catch (error: any) {
-          console.error('[convert] FAILED', file.path, error.message, error.stack);
-          const failResult = { inputPath: file.path, success: false, error: error.message };
-          results.push(failResult);
-          getMainWindow()?.webContents.send('convert-progress', failResult);
+        } else {
+          results.push(convertResults[ci++]!);
         }
       }
 
       return results;
-    }
+    },
   );
 
-  // Check if a conversion is already cached (quick lookup without converting)
+  // ── Quick cache check (no conversion) ──
+
   ipcMain.handle('check-cached', async (_event, inputPath: string, format: string, quality: number) => {
     try {
       const q = quality ?? 100;
       const fmt = format || 'webp';
-      const inputHash = await getFileHash(inputPath);
-      const sourceId = makeSourceId(inputPath, inputHash);
 
-      // Look up by source_id, then compare params in app layer
+      const { hash: inputHash } = await getPool().execute({ type: 'hash', filePath: inputPath });
+      const sourceId = makeSourceId(inputPath, inputHash);
       const record = findBySourceId(sourceId);
 
       if (record && record.format === fmt && record.quality === q) {
         if (fs.existsSync(record.output_path)) {
-          const outputHash = await getFileHash(record.output_path);
+          const { hash: outputHash } = await getPool().execute({ type: 'hash', filePath: record.output_path });
           if (outputHash === record.output_hash) {
             return { cached: true, outputPath: record.output_path };
           }

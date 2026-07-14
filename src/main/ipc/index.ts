@@ -9,8 +9,11 @@ import { registerCacheHandlers } from './cache';
 import { registerSettingsHandlers } from './settings';
 import { registerUpdateHandlers } from './update';
 import { registerBackgroundHandlers } from './backgrounds';
+import { registerDockHandlers } from './dock';
+import { registerPluginHandlers } from './plugin';
 
 export { stopWatcher } from './watch';
+export { destroyConversionPool } from './conversion';
 
 /**
  * Register all IPC handlers. Call once during app startup.
@@ -27,4 +30,6 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
   registerSettingsHandlers();
   registerUpdateHandlers(getMainWindow);
   registerBackgroundHandlers(getMainWindow);
+  registerDockHandlers();
+  registerPluginHandlers(getMainWindow);
 }

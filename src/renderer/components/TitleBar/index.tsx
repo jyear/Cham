@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useT } from '@/i18n';
 import Icon from '@/components/Icon';
 import Modal from '@/components/Modal';
-import Settings from '@/pages/Settings';
-import appIcon from '../../../../assets/icon.png';
+import appIcon from '../../../../assets/icons/icon.png';
 import s from './index.module.css';
 
 interface Props {
@@ -31,7 +30,6 @@ interface UpdateStatus {
 
 export default function TitleBar({ maximized }: Props) {
   const { t } = useT();
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [updateOpen, setUpdateOpen] = useState(false);
   const [version, setVersion] = useState('');
@@ -144,9 +142,6 @@ export default function TitleBar({ maximized }: Props) {
           <button className={s.ctrlBtn} onClick={() => setAboutOpen(true)} title={t.checkUpdate}>
             <Icon type="info" size={14} />
           </button>
-          <button className={s.ctrlBtn} onClick={() => setSettingsOpen(true)} title={t.settings}>
-            <Icon type="settings" size={14} />
-          </button>
           <button className={s.ctrlBtn} onClick={handleMinimize} title={t.minimize}>
             <Icon type="minimize" size={12} />
           </button>
@@ -158,16 +153,6 @@ export default function TitleBar({ maximized }: Props) {
           </button>
         </div>
       </div>
-
-      <Modal
-        open={settingsOpen}
-        title={t.settingsTitle}
-        onClose={() => setSettingsOpen(false)}
-        width={600}
-        height={400}
-      >
-        <Settings />
-      </Modal>
 
       {/* About modal — opened by info icon */}
       <Modal

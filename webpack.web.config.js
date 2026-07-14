@@ -1,4 +1,7 @@
+require('./scripts/load-env')('.env.dev');
+
 const path = require('path');
+const webpack = require('webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 module.exports = (_env, argv) => {
@@ -38,7 +41,12 @@ module.exports = (_env, argv) => {
     plugins: [
       new HtmlWebpackPlugin({
         template: './src/web/index.html',
-        favicon: './assets/icon-32x32.png',
+        favicon: './assets/icons/icon-32x32.png',
+      }),
+      new webpack.DefinePlugin({
+        'process.env.CHAM_UPDATE_URL': JSON.stringify(
+          process.env.CHAM_UPDATE_URL || 'https://cham-download.oss-cn-beijing.aliyuncs.com',
+        ),
       }),
     ],
     devServer: isProd

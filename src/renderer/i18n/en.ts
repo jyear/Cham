@@ -45,6 +45,8 @@ const en = {
 
   // Footer
   footer: 'Powered by sharp · Based on cham-cli',
+  keepInDock: 'Keep in Dock',
+  removeFromDock: 'Remove from Dock',
 
   // Settings page
   settingsTitle: 'Settings',
@@ -104,6 +106,36 @@ const en = {
   selectBackgroundImage: 'Select Image...',
   resetBackground: 'Reset',
   noBackground: 'No background image',
+
+  // Home
+  home: 'Home',
+  welcome: 'Welcome',
+
+  // Tools
+  tools: 'Apps',
+  toolsTitle: 'Apps',
+  conversionTool: 'Image Conversion',
+  conversionToolDesc: 'Convert images to WebP / AVIF format',
+
+  // Store
+  store: 'Store',
+  storeInstalled: 'Installed',
+  storeDiscover: 'Discover',
+  storeInstall: 'Install',
+  storeUninstall: 'Uninstall',
+  storeUpdating: 'Updating...',
+  storeInstalling: 'Installing...',
+  storeInstallSuccess: 'Installed successfully',
+  storeInstallFailed: 'Install failed',
+  storeUninstallConfirm: 'Remove this plugin?',
+  storeVersion: (v: string) => `v${v}`,
+  storeAuthor: (a: string) => `By ${a}`,
+  storeBuiltinBadge: 'Built-in',
+  storeStoreBadge: 'Store',
+  storeNoPlugins: 'No plugins installed yet',
+  storeBrowseHint: 'Switch to the Discover tab to find plugins',
+  storeNoStorePlugins: 'No plugins available',
+  storeRefresh: 'Refresh',
 
   // Misc
   minimize: 'Minimize',

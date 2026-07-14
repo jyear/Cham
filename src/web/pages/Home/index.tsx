@@ -9,7 +9,7 @@ import {
   PLATFORM_ICONS,
   downloadUrl,
 } from '../../data/version';
-import appIcon from '../../../../assets/icon.png';
+import appIcon from '../../../../assets/icons/icon.png';
 import './index.css';
 
 const FALLBACK_VERSION = '0.0.1';

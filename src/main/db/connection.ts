@@ -68,6 +68,41 @@ export function init(dbPath?: string): void {
       created_at TEXT DEFAULT (datetime('now'))
     );
   `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS dock (
+      app_key      TEXT PRIMARY KEY,
+      icon         TEXT NOT NULL,
+      color        TEXT NOT NULL,
+      title        TEXT NOT NULL,
+      description  TEXT,
+      unresizable  INTEGER NOT NULL DEFAULT 0,
+      sort_order   INTEGER NOT NULL DEFAULT 0
+    );
+  `);
+
+  // ── Plugin system tables ──
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS plugin_manifests (
+      plugin_id    TEXT PRIMARY KEY,
+      manifest     TEXT NOT NULL,
+      install_path TEXT NOT NULL,
+      installed_at TEXT DEFAULT (datetime('now')),
+      version      TEXT NOT NULL
+    );
+  `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS plugin_store (
+      plugin_id  TEXT NOT NULL,
+      key        TEXT NOT NULL,
+      value      TEXT NOT NULL DEFAULT '',
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now')),
+      PRIMARY KEY (plugin_id, key)
+    );
+  `);
 }
 
 export function close(): void {

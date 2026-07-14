@@ -21,6 +21,15 @@ export interface WatchChangeEvent {
   path?: string;
 }
 
+export interface DockEntry {
+  app_key: string;
+  icon: string;
+  color: string;
+  title: string;
+  description: string | null;
+  unresizable: number;
+}
+
 export interface ConvertResult {
   inputPath: string;
   outputPath?: string;
@@ -90,12 +99,31 @@ export interface ChamAPI {
   deleteDir: (dirPath: string) => Promise<{ success: boolean; error?: string }>;
   onConvertProgress: (cb: (result: ConvertResult) => void) => () => void;
 
+  // Dock
+  loadDock: () => Promise<{ success: boolean; entries?: DockEntry[]; error?: string }>;
+  saveDock: (entries: DockEntry[]) => Promise<{ success: boolean; error?: string }>;
+
   // Window controls
   windowMinimize: () => Promise<void>;
   windowMaximize: () => Promise<void>;
   windowClose: () => Promise<void>;
   windowIsMaximized: () => Promise<boolean>;
   onWindowStateChanged: (callback: (state: { maximized: boolean }) => void) => () => void;
+
+  // Plugin system
+  plugin: {
+    listInstalled: () => Promise<{ success: boolean; plugins?: any[]; error?: string }>;
+    install: (manifestUrl: string) => Promise<{ success: boolean; manifest?: any; error?: string }>;
+    uninstall: (pluginId: string) => Promise<{ success: boolean; error?: string }>;
+    fetchManifest: (manifestUrl: string) => Promise<{ success: boolean; manifest?: any; error?: string }>;
+    loadComponent: (pluginId: string) => Promise<{ success: boolean; source?: string; error?: string }>;
+    getItem: (pluginId: string, key: string) => Promise<{ success: boolean; value?: string | null; error?: string }>;
+    setItem: (pluginId: string, key: string, value: string) => Promise<{ success: boolean; error?: string }>;
+    removeItem: (pluginId: string, key: string) => Promise<{ success: boolean; error?: string }>;
+    listItems: (pluginId: string) => Promise<{ success: boolean; items?: Array<{ key: string; value: string }>; error?: string }>;
+    call: (pluginId: string, channel: string, ...args: any[]) => Promise<any>;
+    isActive: (pluginId: string) => Promise<{ success: boolean; active: boolean; error?: string }>;
+  };
 }
 
 // Expose protected methods via contextBridge
@@ -166,6 +194,11 @@ contextBridge.exposeInMainWorld('cham', {
     return () => ipcRenderer.removeListener('convert-progress', handler);
   },
 
+  // Dock
+  loadDock: () => ipcRenderer.invoke('dock:load'),
+  saveDock: (entries: Array<{ app_key: string; icon: string; color: string; title: string; description: string | null; unresizable: number }>) =>
+    ipcRenderer.invoke('dock:save', entries),
+
   // Window controls
   windowMinimize: () => ipcRenderer.invoke('window-minimize'),
   windowMaximize: () => ipcRenderer.invoke('window-maximize'),
@@ -177,5 +210,21 @@ contextBridge.exposeInMainWorld('cham', {
     ipcRenderer.on('window-state-changed', handler);
     // Return unsubscribe function
     return () => ipcRenderer.removeListener('window-state-changed', handler);
+  },
+
+  // Plugin system
+  plugin: {
+    listInstalled: () => ipcRenderer.invoke('plugin:listInstalled'),
+    install: (manifestUrl: string) => ipcRenderer.invoke('plugin:install', manifestUrl),
+    uninstall: (pluginId: string) => ipcRenderer.invoke('plugin:uninstall', pluginId),
+    fetchManifest: (manifestUrl: string) => ipcRenderer.invoke('plugin:fetchManifest', manifestUrl),
+    loadComponent: (pluginId: string) => ipcRenderer.invoke('plugin:loadComponent', pluginId),
+    getItem: (pluginId: string, key: string) => ipcRenderer.invoke('plugin:getItem', pluginId, key),
+    setItem: (pluginId: string, key: string, value: string) => ipcRenderer.invoke('plugin:setItem', pluginId, key, value),
+    removeItem: (pluginId: string, key: string) => ipcRenderer.invoke('plugin:removeItem', pluginId, key),
+    listItems: (pluginId: string) => ipcRenderer.invoke('plugin:listItems', pluginId),
+    call: (pluginId: string, channel: string, ...args: any[]) =>
+      ipcRenderer.invoke(`plugin:${pluginId}:${channel}`, ...args),
+    isActive: (pluginId: string) => ipcRenderer.invoke('plugin:isActive', pluginId),
   },
 } satisfies ChamAPI);
