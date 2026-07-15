@@ -4,8 +4,8 @@ Cham 插件通过两个接口与宿主 App 交互：
 
 | 接口 | 运行进程 | 能力 |
 |------|---------|------|
-| `window.cham` | Renderer（浏览器沙箱） | IPC 通信、文件选择、转换、设置 |
-| `PluginMainApi` (`api`) | Main（Node.js，VM 沙箱） | sharp、SQLite、文件 I/O、自定义 IPC |
+| `window.cham` | Renderer（浏览器沙箱） | IPC 通信、文件选择、设置 |
+| `PluginMainApi` (`api`) | Main（Node.js，VM 沙箱） | sharp、SQLite、文件 I/O、Node 原生 API、自定义 IPC |
 
 ---
 
@@ -14,16 +14,12 @@ Cham 插件通过两个接口与宿主 App 交互：
 - [Manifest 规范](#manifest-规范)
 - [Renderer API (`window.cham`)](#renderer-api-windowcham)
   - [文件操作](#文件操作)
-  - [图片转换](#图片转换)
-  - [Watch 模式](#watch-模式)
   - [应用设置](#应用设置)
-  - [缓存管理](#缓存管理)
   - [更新管理](#更新管理)
   - [窗口控制](#窗口控制)
   - [Dock 管理](#dock-管理)
   - [背景图片](#背景图片)
   - [Plugin 管理](#plugin-管理)
-  - [事件订阅](#事件订阅)
 - [Main Process API (`api`)](#main-process-api-api)
   - [IPC 注册](#ipc-注册)
   - [图片处理 (sharp)](#图片处理-sharp)
@@ -167,97 +163,6 @@ interface FileInfo {
 }
 ```
 
-### 图片转换
-
-```typescript
-// 转换单张图片
-const result = await window.cham.convertImage({
-  inputPath: '/path/to/photo.jpg',
-  outputDir: '/output/dir',
-  quality: 90,
-  keepName: false,
-  copyNonConvertible: true,
-  format: 'webp',
-  options: { lossless: false, effort: 4 },
-});
-
-// 批量转换
-const results = await window.cham.convertImages({
-  files: [{ path: '/a.jpg', name: 'a.jpg', size: 1024, ext: 'jpg' }],
-  outputDir: '/output/dir',
-  quality: 85,
-  format: 'avif',
-});
-```
-
-**转换参数：**
-| 参数 | 类型 | 默认 | 说明 |
-|------|------|------|------|
-| `inputPath` / `files` | `string` / `FileInfo[]` | — | 输入文件 |
-| `outputDir` | `string` | — | 输出目录 |
-| `quality` | `number` | `100` | 质量 0-100 |
-| `keepName` | `boolean` | `false` | 保留原始扩展名 |
-| `copyNonConvertible` | `boolean` | `false` | 复制不可转换的文件 |
-| `format` | `string` | `'webp'` | 目标格式：`'webp'` / `'avif'` |
-| `options` | `object` | — | 格式特定选项，见下方 |
-
-**WebP 选项（`format: 'webp'`）：**
-| Key | 类型 | 默认 | 说明 |
-|-----|------|------|------|
-| `lossless` | `boolean` | `false` | 无损压缩 |
-| `nearLossless` | `boolean` | `false` | 近无损压缩 |
-| `alphaQuality` | `number` | `100` | Alpha 通道质量 0-100 |
-| `effort` | `number` | `4` | CPU 占用 0（最快）~ 6（最慢） |
-| `preset` | `string` | `'default'` | 预设：`default`/`photo`/`picture`/`drawing`/`icon`/`text` |
-| `smartSubsample` | `boolean` | `false` | 高质量色度二次采样 |
-| `smartDeblock` | `boolean` | `false` | 自动去块滤波 |
-| `minSize` | `boolean` | `false` | 最小化体积（禁用动画关键帧） |
-| `loop` | `number` | `0` | 动画循环次数（0=无限） |
-| `mixed` | `boolean` | `false` | 混合有损/无损动画帧 |
-| `exact` | `boolean` | `false` | 保留透明像素颜色 |
-
-**返回类型：**
-```typescript
-interface ConvertResult {
-  inputPath: string;
-  outputPath?: string;
-  outputSize?: number;
-  success: boolean;
-  cached?: boolean;
-  copied?: boolean;
-  error?: string;
-}
-```
-
-### Watch 模式
-
-```typescript
-// 启动文件监听
-await window.cham.watchStart('/path/to/watch/folder');
-
-// 停止监听
-await window.cham.watchStop();
-
-// 监听文件变化事件
-const unsubscribe = window.cham.onWatchChange((event) => {
-  console.log(event.event);  // 'add' | 'change' | 'unlink' | 'unlinkDir'
-  console.log(event.file);   // FileInfo | undefined
-  console.log(event.path);   // string | undefined
-});
-
-// 取消订阅
-unsubscribe();
-```
-
-**转换进度事件（所有转换请求共享）：**
-```typescript
-const unsubscribe = window.cham.onConvertProgress((result: ConvertResult) => {
-  // 每个文件处理完成后触发
-  console.log(`${result.inputPath} → ${result.success}`);
-});
-unsubscribe();
-```
-
 ### 应用设置
 
 ```typescript
@@ -270,16 +175,6 @@ await window.cham.saveSettings({ quality: '90', format: 'webp' });
 ```
 
 > ⚠️ 全局设置所有插件共享。如需插件独立存储，使用 `window.cham.plugin.getItem/setItem`（见 [Plugin 管理](#plugin-管理)）。
-
-### 缓存管理
-
-```typescript
-// 清除转换缓存
-await window.cham.clearCache();
-
-// 检查文件是否已缓存
-const { cached, outputPath } = await window.cham.checkCached('/path/to/input.jpg');
-```
 
 ### 更新管理
 
@@ -398,16 +293,6 @@ const result = await window.cham.plugin.call(
 const { active } = await window.cham.plugin.isActive('watermark-tool');
 ```
 
-### 事件订阅
-
-所有事件订阅方法返回一个取消订阅函数，务必在组件卸载时调用：
-
-```typescript
-const unsubscribe = window.cham.onXxxEvent(callback);
-// 在 useEffect cleanup 中：
-return () => unsubscribe();
-```
-
 ---
 
 ## Main Process API (`api`)
@@ -522,6 +407,49 @@ api.fs.mkdir('output/temp');
 api.fs.listDir('output');             // → string[] (文件/目录名)
 api.fs.remove('temp');                // 递归删除
 ```
+
+### Node.js 原生 API (`api.native`)
+
+沙箱化的 Node.js 原生模块——只暴露安全的纯函数和插件目录内的操作：
+
+```javascript
+// ── Crypto ──
+const buf = api.native.crypto.randomBytes(32);
+const hash = api.native.crypto.sha256('hello');
+const checksum = api.native.crypto.md5(buffer);
+
+// ── OS info ──
+const platform = api.native.os.platform();   // 'win32' | 'darwin' | 'linux'
+const arch = api.native.os.arch();           // 'x64' | 'arm64'
+const memory = api.native.os.freemem();
+const home = api.native.os.homedir();
+
+// ── Path manipulation (纯字符串，不访问文件系统) ──
+const full = api.native.path.join(api.pluginDir, 'output', 'thumb.jpg');
+const name = api.native.path.basename('/a/b/c.jpg');       // 'c.jpg'
+const ext = api.native.path.extname('photo.png');          // '.png'
+const dir = api.native.path.dirname('/a/b/c.jpg');         // '/a/b'
+const info = api.native.path.parse('/a/b/c.jpg');
+// → { root: '/', dir: '/a/b', base: 'c.jpg', ext: '.jpg', name: 'c' }
+
+// ── HTTP (URL 白名单，目标限制插件目录) ──
+const html = await api.native.http.get('https://example.com/data.json');
+await api.native.http.download('https://example.com/asset.zip', 'downloads/asset.zip');
+
+// ── 子进程（仅限插件目录内的可执行文件）──
+const result = await api.native.child_process.execFile('bin/ffmpeg', [
+  '-i', inputPath,
+  '-vf', 'scale=1280:720',
+  outputPath,
+], { timeout: 30000 });
+// → { stdout: '', stderr: '...', exitCode: 0 }
+```
+
+**安全限制：**
+- `http.get/download` 只允许 `http://` / `https://` URL
+- `http.download` 目标路径必须在插件目录内
+- `child_process.execFile` 只能执行插件目录内的文件（如 `bin/ffmpeg`），shell 禁用，超时默认 60 秒
+- `process.exit()`、`require()`、原始 `fs` **不暴露**
 
 ### 日志
 

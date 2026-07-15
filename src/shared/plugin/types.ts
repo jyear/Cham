@@ -182,6 +182,65 @@ export interface PluginMainApi {
    */
   emitHook(hookName: string, ...args: any[]): Promise<void>;
 
+  /**
+   * Sandboxed Node.js native APIs.
+   * Only safe, read-only or plugin-scoped operations are exposed.
+   * Dangerous modules (child_process, raw fs, process.exit) are NOT available.
+   */
+  native: {
+    crypto: {
+      randomBytes(size: number): Buffer;
+      sha256(data: string | Buffer): string;
+      md5(data: string | Buffer): string;
+    };
+    os: {
+      platform(): NodeJS.Platform;
+      arch(): string;
+      cpus(): { model: string; speed: number }[];
+      totalmem(): number;
+      freemem(): number;
+      homedir(): string;
+      tmpdir(): string;
+    };
+    path: {
+      join(...parts: string[]): string;
+      resolve(...parts: string[]): string;
+      basename(p: string, ext?: string): string;
+      extname(p: string): string;
+      dirname(p: string): string;
+      normalize(p: string): string;
+      parse(p: string): { root: string; dir: string; base: string; ext: string; name: string };
+    };
+    http: {
+      /** Fetch a URL and return the response body as a string */
+      get(url: string): Promise<string>;
+      /** Download a URL to a file in the plugin directory */
+      download(url: string, destRelativePath: string): Promise<void>;
+    };
+    /**
+     * Execute a bundled executable from the plugin directory.
+     *
+     * The executable path is resolved relative to the plugin directory.
+     * Shell is always disabled. Only executables shipped WITH the plugin
+     * can be spawned (no system commands, no PATH resolution).
+     */
+    child_process: {
+      /**
+       * Spawn an executable from the plugin directory.
+       *
+       * @param relativeExePath  path to the executable, relative to plugin dir (e.g. "bin/ffmpeg")
+       * @param args             argument array (strings only, no shell interpolation)
+       * @param options.timeout  kill the process after N ms (default: 60000)
+       * @returns                { stdout: string, stderr: string, exitCode: number }
+       */
+      execFile(
+        relativeExePath: string,
+        args?: string[],
+        options?: { timeout?: number },
+      ): Promise<{ stdout: string; stderr: string; exitCode: number }>;
+    };
+  };
+
   /** Logger that prefixes messages with the plugin ID */
   log: {
     info(msg: string): void;

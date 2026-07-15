@@ -49,34 +49,15 @@ declare global {
     selectFiles: () => Promise<FileInfo[]>;
     selectFolder: () => Promise<FolderResult>;
     selectOutputDir: () => Promise<string | null>;
-    convertImage: (params: {
-      inputPath: string;
-      outputDir: string;
-      quality?: number;
-      keepName?: boolean;
-      copyNonConvertible?: boolean;
-      format?: string;
-      options?: Record<string, number | boolean | string>;
-    }) => Promise<ConvertResult>;
-    convertImages: (params: {
-      files: FileInfo[];
-      outputDir: string;
-      quality?: number;
-      keepName?: boolean;
-      copyNonConvertible?: boolean;
-      format?: string;
-      options?: Record<string, number | boolean | string>;
-    }) => Promise<ConvertResult[]>;
     getFileHash: (filePath: string) => Promise<{ success: boolean; hash?: string; error?: string }>;
     readImage: (filePath: string) => Promise<{ success: boolean; dataUrl?: string; error?: string }>;
     backgroundList: () => Promise<{ success: boolean; items?: BackgroundItem[]; error?: string }>;
     backgroundSelect: () => Promise<{ success: boolean; items?: BackgroundItem[]; error?: string }>;
     backgroundSetActive: (id: number) => Promise<{ success: boolean; dataUrl?: string; items?: BackgroundItem[]; error?: string }>;
     backgroundDelete: (id: number) => Promise<{ success: boolean; dataUrl?: string; items?: BackgroundItem[]; error?: string }>;
+    backgroundSetFromUrl: (url: string) => Promise<{ success: boolean; dataUrl?: string; items?: BackgroundItem[]; error?: string }>;
     loadSettings: () => Promise<{ success: boolean; settings?: Record<string, string>; error?: string }>;
     saveSettings: (settings: Record<string, string>) => Promise<{ success: boolean; error?: string }>;
-    saveFormatOptions: (formatType: string, options: Record<string, any>) => Promise<{ success: boolean; error?: string }>;
-    loadFormatOptions: (formatType: string) => Promise<{ success: boolean; options?: Record<string, any> | null; error?: string }>;
     clearCache: () => Promise<{ success: boolean; error?: string }>;
     checkUpdate: () => Promise<any>;
     getAppVersion: () => Promise<string>;
@@ -88,10 +69,8 @@ declare global {
     onUpdateProgress: (cb: (data: { progress: number; done?: boolean }) => void) => () => void;
     watchStart: (folderPath: string) => Promise<{ success: boolean; error?: string }>;
     watchStop: () => Promise<{ success: boolean }>;
-    onWatchChange: (callback: (ev: WatchChangeEvent) => void) => () => void;
     deleteFile: (filePath: string) => Promise<{ success: boolean; error?: string }>;
     deleteDir: (dirPath: string) => Promise<{ success: boolean; error?: string }>;
-    onConvertProgress: (cb: (result: ConvertResult) => void) => () => void;
     loadDock: () => Promise<{ success: boolean; entries?: DockEntry[]; error?: string }>;
     saveDock: (entries: DockEntry[]) => Promise<{ success: boolean; error?: string }>;
     windowMinimize: () => Promise<void>;
@@ -118,6 +97,7 @@ declare global {
         translations?: Record<string, Record<string, string>>;
         error?: string;
       }>;
+      subscribe: (pluginId: string, channel: string, cb: (...args: any[]) => void) => () => void;
     };
   }
 

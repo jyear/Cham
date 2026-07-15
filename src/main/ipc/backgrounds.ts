@@ -4,6 +4,7 @@ import * as path from 'path';
 import * as crypto from 'crypto';
 import { add, getAll, setSelected, remove, type BackgroundRecord } from '../db';
 import { getMimeType } from '../../shared/utils/mime';
+import { downloadFile } from '../utils/http';
 
 function getBgDir(): string {
   const dir = path.join(app.getPath('userData'), 'backgrounds');
@@ -117,6 +118,37 @@ export function registerBackgroundHandlers(getMainWindow: () => BrowserWindow | 
         return { success: true, dataUrl, items };
       }
       return { success: false, error: 'Not found' };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Set background from URL (for plugins)
+  ipcMain.handle('background:setFromUrl', async (_event, url: string) => {
+    try {
+      // Download to backgrounds directory
+      const bgDir = getBgDir();
+      const ext = path.extname(new URL(url).pathname).toLowerCase() || '.jpg';
+      const filename = `bg_${Date.now()}${ext}`;
+      const destPath = path.join(bgDir, filename);
+
+      await downloadFile(url, destPath);
+      console.log('[background] Downloaded from URL:', url);
+
+      // Register in DB
+      add(destPath, filename);
+
+      // Set as active
+      const records = getAll();
+      const inserted = records[records.length - 1];
+      if (inserted) {
+        setSelected(inserted.id);
+      }
+
+      const active = records.find((r) => r.selected === 1);
+      const dataUrl = active ? fileToDataUrl(active.path) : '';
+
+      return { success: true, dataUrl, items: records.map(recordToItem) };
     } catch (error: any) {
       return { success: false, error: error.message };
     }

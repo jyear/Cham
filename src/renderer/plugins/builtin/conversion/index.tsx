@@ -53,7 +53,7 @@ export default function Conversion() {
   // Load / reset format options when format changes
   useEffect(() => {
     if (!settingsLoaded || !window.cham) return;
-    window.cham.loadFormatOptions(format).then((result) => {
+    window.cham.plugin.call('conversion', 'load-format-options', format).then((result) => {
       const defaults = getDefaultOptions(format);
       if (result.success && result.options) {
         setFormatOptions({ ...defaults, ...result.options });
@@ -66,7 +66,7 @@ export default function Conversion() {
   // Save format options when they change
   useEffect(() => {
     if (!settingsLoaded || !window.cham) return;
-    window.cham.saveFormatOptions(format, formatOptions);
+    window.cham.plugin.call('conversion', 'save-format-options',format, formatOptions);
   }, [format, formatOptions, settingsLoaded]);
 
   // Save settings on change
@@ -105,7 +105,7 @@ export default function Conversion() {
     setConvertedItems([]);
     setProcessedCount(0);
 
-    window.cham.convertImages({
+    window.cham.plugin.call('conversion', 'convert-images', {
       files, outputDir, quality, keepName, copyNonConvertible, format,
       options: latestRef.current.formatOptions,
     }).then(() => {
@@ -117,7 +117,7 @@ export default function Conversion() {
   useEffect(() => {
     if (!window.cham) return;
 
-    const unsub = window.cham.onConvertProgress((result) => {
+    const unsub = window.cham.plugin.subscribe('conversion', 'convert-progress', (result: any) => {
       // Count every processed file (including cached/copied)
       setProcessedCount((prev) => prev + 1);
 
@@ -162,7 +162,7 @@ export default function Conversion() {
   useEffect(() => {
     if (!window.cham) return;
 
-    const unsub = window.cham.onWatchChange((ev) => {
+    const unsub = window.cham.plugin.subscribe('conversion', 'watch-change', (ev: any) => {
       const { outputDir: curOutput, quality: curQuality, keepName: curKeep,
               format: curFormat, copyNonConvertible: curCopy, watchMode: curWatch,
               watchFolder: curWatchFolder, files: curFiles, formatOptions: curFormatOptions } = latestRef.current;
@@ -183,7 +183,7 @@ export default function Conversion() {
 
         // Auto-convert if output dir is set
         if (curOutput && window.cham) {
-          window.cham.convertImage({
+          window.cham.plugin.call('conversion', 'convert-image', {
             inputPath: ev.file.path,
             outputDir: curOutput,
             quality: curQuality,
@@ -223,7 +223,7 @@ export default function Conversion() {
         );
 
         if (curOutput && window.cham) {
-          window.cham.convertImage({
+          window.cham.plugin.call('conversion', 'convert-image', {
             inputPath: ev.file.path,
             outputDir: curOutput,
             quality: curQuality,
@@ -346,7 +346,7 @@ export default function Conversion() {
     setConvertedItems([]);
     setProcessedCount(0);
 
-    await window.cham.convertImages({
+    await window.cham.plugin.call('conversion', 'convert-images', {
       files, outputDir, quality, keepName, copyNonConvertible, format,
       options: formatOptions,
     });

@@ -506,24 +506,24 @@ module.exports = function(api) {
 
 > **Note:** Strategy C is not yet enabled. If your plugin genuinely needs a native package Cham doesn't provide, the recommended path is to request it be added to Cham's core dependencies — this is safer and benefits all plugins.
 
-### Rendering APIs (available to all plugins)
+### Common APIs (available to all plugins)
 
-All plugins — whether or not they have a `main` entry — can use the full `window.cham` API:
+All plugins — whether or not they have a `main` entry — can use these `window.cham` APIs:
 
 | API | Description |
 |-----|------------|
 | `cham.selectFiles()` | Open file picker |
 | `cham.selectFolder()` | Open folder picker |
 | `cham.selectOutputDir()` | Select output directory |
-| `cham.convertImage(params)` | Convert a single image |
-| `cham.convertImages(params)` | Batch convert images |
 | `cham.getFileHash(path)` | Get SHA-256 hash of a file |
 | `cham.readImage(path)` | Read image as data URL |
 | `cham.loadSettings()` / `cham.saveSettings()` | App settings |
-| `cham.watchStart()` / `cham.watchStop()` | File watch mode |
-| `cham.onConvertProgress(cb)` | Subscribe to conversion progress |
-| `cham.onWatchChange(cb)` | Subscribe to file changes |
-| `cham.plugin.*` | Plugin lifecycle + storage + IPC (see above) |
+| `cham.clearCache()` | Clear cache (triggers `cache:clear` hook) |
+| `cham.backgroundSetFromUrl(url)` | Download and set background image |
+| `cham.deleteFile(path)` / `cham.deleteDir(path)` | Delete files/directories |
+| `cham.plugin.*` | Plugin lifecycle + storage + IPC + hooks (see above) |
+
+> Conversion-specific APIs (`convertImage`, `convertImages`, `onConvertProgress`, `onWatchChange`) are internal to the Conversion plugin and accessed via `cham.plugin.call('conversion', ...)`.
 
 ### Publishing to the Store
 

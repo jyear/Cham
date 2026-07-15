@@ -432,6 +432,69 @@ class PluginHost {
         this.getMainWindow?.()?.webContents.send(fullChannel, data);
       },
 
+      // ── Sandboxed Node.js natives ──
+      native: {
+        crypto: {
+          randomBytes: (size: number) => require('crypto').randomBytes(size),
+          sha256: (data: string | Buffer) =>
+            require('crypto').createHash('sha256').update(data).digest('hex'),
+          md5: (data: string | Buffer) =>
+            require('crypto').createHash('md5').update(data).digest('hex'),
+        },
+        os: {
+          platform: () => require('os').platform(),
+          arch: () => require('os').arch(),
+          cpus: () => require('os').cpus().map((c: any) => ({ model: c.model, speed: c.speed })),
+          totalmem: () => require('os').totalmem(),
+          freemem: () => require('os').freemem(),
+          homedir: () => require('os').homedir(),
+          tmpdir: () => require('os').tmpdir(),
+        },
+        path: {
+          join: (...parts: string[]) => path.join(...parts),
+          resolve: (...parts: string[]) => path.resolve(...parts),
+          basename: (p: string, ext?: string) => path.basename(p, ext),
+          extname: (p: string) => path.extname(p),
+          dirname: (p: string) => path.dirname(p),
+          normalize: (p: string) => path.normalize(p),
+          parse: (p: string) => path.parse(p),
+        },
+        http: {
+          get: async (url: string) => {
+            if (!/^https?:\/\//i.test(url)) throw new Error('Only http/https URLs are allowed');
+            const { httpGet } = require('../utils/http');
+            return httpGet(url);
+          },
+          download: async (url: string, destRelativePath: string) => {
+            if (!/^https?:\/\//i.test(url)) throw new Error('Only http/https URLs are allowed');
+            const dest = PluginHost.resolveSafe(pluginDir, destRelativePath);
+            const { downloadFile } = require('../utils/http');
+            await downloadFile(url, dest);
+          },
+        },
+        child_process: {
+          execFile: (relativeExePath: string, args: string[] = [], options?: { timeout?: number }) =>
+            new Promise((resolve, reject) => {
+              const exePath = PluginHost.resolveSafe(pluginDir, relativeExePath);
+              if (!fs.existsSync(exePath)) {
+                return reject(new Error(`Executable not found: ${relativeExePath}`));
+              }
+              const { spawn } = require('child_process');
+              const child = spawn(exePath, args, {
+                shell: false,
+                stdio: ['ignore', 'pipe', 'pipe'],
+                timeout: options?.timeout ?? 60000,
+              });
+              let stdout = '';
+              let stderr = '';
+              child.stdout.on('data', (d: Buffer) => (stdout += d.toString()));
+              child.stderr.on('data', (d: Buffer) => (stderr += d.toString()));
+              child.on('close', (code: number) => resolve({ stdout, stderr, exitCode: code }));
+              child.on('error', reject);
+            }),
+        },
+      },
+
       // ── Logger ──
       log: {
         info(msg: string) {
