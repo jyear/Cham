@@ -4,7 +4,19 @@ import { registerIpcHandlers } from './ipc';
 import { init as initDb, close as closeDb } from './db';
 import { checkForUpdates } from './update';
 import { pluginHost } from './plugin/host';
-import conversionMain, { manifest as conversionManifest } from './plugins/builtin/conversion';
+import type { PluginManifest, PluginMainModule } from '../shared/plugin/types';
+
+/** Auto-discover builtin plugins under plugins/builtin/ */
+function registerBuiltinPlugins(): void {
+  const ctx = (require as any).context('./plugins/builtin', true, /index\.ts$/);
+  for (const key of ctx.keys()) {
+    const mod = ctx(key) as { default?: PluginMainModule; manifest?: PluginManifest };
+    if (mod.manifest && mod.default) {
+      pluginHost.registerBuiltin(mod.manifest, mod.default);
+      console.log(`[main] Registered builtin: ${mod.manifest.id}`);
+    }
+  }
+}
 
 const isDev = process.env.NODE_ENV === 'development';
 const DEV_SERVER_URL = 'http://localhost:9000';
@@ -64,8 +76,8 @@ app.whenReady().then(async () => {
   // Give host access to the main window for push events
   pluginHost.setMainWindowGetter(() => mainWindow);
 
-  // Register builtin plugins
-  pluginHost.registerBuiltin(conversionManifest, conversionMain);
+  // Auto-discover and register all builtin plugins
+  registerBuiltinPlugins();
 
   // Activate all installed plugins' main modules
   await pluginHost.start();
