@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo, useEffect, type ReactNode } from 'react';
 import en from './en';
 import zh from './zh';
 
@@ -13,6 +13,9 @@ const dictionaries: Record<Lang, T> = { en, zh };
  * Populated at app startup via registerPluginI18n().
  */
 const pluginTranslations: Record<string, Record<string, string>> = {};
+
+/** Listener set to notify I18nProvider when plugin translations are registered. */
+const i18nListeners = new Set<() => void>();
 
 /**
  * Register translations from a plugin.
@@ -29,6 +32,8 @@ export function registerPluginI18n(translations: Partial<Record<Lang, Record<str
     if (!pluginTranslations[lang]) pluginTranslations[lang] = {};
     Object.assign(pluginTranslations[lang], keys);
   }
+  // Notify React that plugin translations have changed
+  i18nListeners.forEach((fn) => fn());
 }
 
 /**
@@ -65,13 +70,23 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('cham-lang', l);
   }, []);
 
+  // Version counter bumped each time plugin translations are registered,
+  // so useMemo re-computes `t` with the latest plugin keys.
+  const [i18nVersion, setI18nVersion] = useState(0);
+
+  useEffect(() => {
+    const bump = () => setI18nVersion((v) => v + 1);
+    i18nListeners.add(bump);
+    return () => { i18nListeners.delete(bump); };
+  }, []);
+
   // Merge app dictionary with plugin translations
   const t = useMemo(() => {
     const app = dictionaries[lang];
     const plugins = pluginTranslations[lang];
     if (!plugins) return app;
     return { ...(app as any), ...plugins } as T;
-  }, [lang]);
+  }, [lang, i18nVersion]);
 
   return (
     <I18nContext.Provider value={{ t, lang, setLang: handleSetLang }}>

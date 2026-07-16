@@ -50,6 +50,9 @@ module.exports = (_env, argv) => {
         'process.env.CHAM_STORE_URL': JSON.stringify(
           process.env.CHAM_STORE_URL || 'https://cham-download.oss-cn-beijing.aliyuncs.com/store',
         ),
+        'process.env.FOR_DEVELOPMENT': JSON.stringify(
+          process.env.FOR_DEVELOPMENT || 'false',
+        ),
       }),
     ],
     devServer: isProd

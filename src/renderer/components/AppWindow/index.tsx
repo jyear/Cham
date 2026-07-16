@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useWindows } from '@/contexts/WindowContext';
 import { useT } from '@/i18n';
@@ -44,6 +44,24 @@ export default function AppWindow({ win }: Props) {
 
   const { t } = useT();
   const [showInfo, setShowInfo] = useState(false);
+  const [titleBarActions, setTitleBarActions] = useState<Array<{ id: string; icon: string; tooltip: string }>>([]);
+
+  // Load title bar actions scoped to this plugin window
+  useEffect(() => {
+    if (window.cham) {
+      window.cham.getTitleBarActions().then((actions) => {
+        setTitleBarActions(actions.filter((a) => a.pluginId === win.appKey));
+      });
+    }
+    const unsub = window.cham?.onTitleBarActionsChanged((actions) => {
+      setTitleBarActions(actions.filter((a) => a.pluginId === win.appKey));
+    });
+    return () => { if (unsub) unsub(); };
+  }, [win.appKey]);
+
+  const handleTitleBarAction = (actionId: string) => {
+    window.cham?.triggerTitleBarAction(actionId);
+  };
 
   const isMinimized = mode === WindowMode.Minimized;
   const isMaximized = mode === WindowMode.Maximized;
@@ -78,11 +96,23 @@ export default function AppWindow({ win }: Props) {
       >
         <TrafficLights winId={win.id} unresizable={win.unresizable} />
         <span className={s.titleText}>{displayTitle}</span>
-        {win.description && (
-          <button className={s.helpBtn} title="About this app" onClick={() => setShowInfo(true)}>
-            <Icon type="help" size={14} />
-          </button>
-        )}
+        <div className={s.titleActions}>
+          {titleBarActions.map((action) => (
+            <button
+              key={action.id}
+              className={s.helpBtn}
+              title={action.tooltip}
+              onClick={() => handleTitleBarAction(action.id)}
+            >
+              <Icon type={action.icon as any} size={14} />
+            </button>
+          ))}
+          {win.description && (
+            <button className={s.helpBtn} title="About this app" onClick={() => setShowInfo(true)}>
+              <Icon type="help" size={14} />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Content */}

@@ -136,6 +136,7 @@ const en = {
   storeBrowseHint: 'Switch to the Discover tab to find plugins',
   storeNoStorePlugins: 'No plugins available',
   storeRefresh: 'Refresh',
+  addLocalApp: 'Add Local App',
 
   // Misc
   minimize: 'Minimize',

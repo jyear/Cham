@@ -205,9 +205,6 @@ export default function Settings() {
             <div className={s.bgAdd} onClick={selectBackground}>
               <span className={s.bgAddIcon}>+</span>
             </div>
-            {items.length === 0 && (
-              <div className={s.bgPlaceholder}>{t.noBackground}</div>
-            )}
           </div>
         </div>
       </div>

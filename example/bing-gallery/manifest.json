@@ -1,0 +1,34 @@
+{
+  "id": "bing-gallery",
+  "name": "bingGallery",
+  "version": "1.0.0",
+  "description": "bingGalleryDesc",
+  "icon": "bing",
+  "color": "linear-gradient(135deg, #0b7285 0%, #1098ad 50%, #15aabf 100%)",
+  "minWidth": 900,
+  "minHeight": 600,
+  "category": "store",
+  "permissions": ["fs", "storage"],
+  "entry": "renderer.js",
+  "main": "main.js",
+  "devServer": "http://localhost:3001",
+  "dbTables": [
+    {
+      "tableName": "plugin_bing_favorites",
+      "columns": [
+        { "name": "id", "type": "INTEGER", "constraints": "PRIMARY KEY AUTOINCREMENT" },
+        { "name": "image_url", "type": "TEXT", "constraints": "NOT NULL" },
+        { "name": "copyright", "type": "TEXT" },
+        { "name": "title", "type": "TEXT" },
+        { "name": "created_at", "type": "TEXT", "constraints": "DEFAULT (datetime('now'))" }
+      ]
+    },
+    {
+      "tableName": "plugin_bing_settings",
+      "columns": [
+        { "name": "key", "type": "TEXT", "constraints": "PRIMARY KEY" },
+        { "name": "value", "type": "TEXT" }
+      ]
+    }
+  ]
+}

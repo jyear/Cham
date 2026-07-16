@@ -96,6 +96,8 @@ export function WindowProvider({ children }: { children: React.ReactNode }) {
     pluginRegistry.init().then(() => {
       return window.cham.loadDock();
     }).then((result) => {
+      loadedRef.current = true;
+
       if (!result.success || !result.entries || result.entries.length === 0) return;
 
       const allDefs = loadAppDefs();
@@ -123,8 +125,10 @@ export function WindowProvider({ children }: { children: React.ReactNode }) {
       if (restored.length > 0) {
         setPinnedApps(restored);
       }
+    }).catch((e) => {
+      console.error('Failed to load dock:', e);
       loadedRef.current = true;
-    }).catch((e) => console.error('Failed to load dock:', e));
+    });
   }, []);
 
   // Persist on changes (skip initial load)

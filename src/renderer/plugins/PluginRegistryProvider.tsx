@@ -15,8 +15,10 @@ interface PluginRegistryContextValue {
   error: string | null;
   /** Re-run initialization (e.g. after install/uninstall) */
   refresh: () => Promise<void>;
-  /** Install a store plugin */
+  /** Install a store plugin from remote URL */
   installPlugin: (manifestUrl: string) => Promise<void>;
+  /** Install a local plugin from folder path (dev mode) */
+  installLocalPlugin: (folderPath: string) => Promise<void>;
   /** Uninstall a store plugin */
   uninstallPlugin: (pluginId: string) => Promise<void>;
 }
@@ -57,6 +59,17 @@ export function PluginRegistryProvider({ children }: { children: React.ReactNode
     }
   }, [refresh]);
 
+  const handleInstallLocal = useCallback(async (folderPath: string) => {
+    setError(null);
+    try {
+      await pluginRegistry.installLocalPlugin(folderPath);
+      await refresh();
+    } catch (err: any) {
+      setError(err.message);
+      throw err;
+    }
+  }, [refresh]);
+
   const handleUninstall = useCallback(async (pluginId: string) => {
     setError(null);
     try {
@@ -82,6 +95,7 @@ export function PluginRegistryProvider({ children }: { children: React.ReactNode
         error,
         refresh,
         installPlugin: handleInstall,
+        installLocalPlugin: handleInstallLocal,
         uninstallPlugin: handleUninstall,
       }}
     >

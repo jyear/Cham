@@ -1,0 +1,14 @@
+.bing-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex: 1;
+  color: var(--text-tertiary, #555);
+}
+
+.bing-empty p {
+  font-size: 14px;
+  margin: 0;
+}

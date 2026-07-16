@@ -1,8 +1,11 @@
+import React from 'react';
 import type { PluginManifest, PluginBundle } from '@shared/plugin/types';
 import { registerPluginI18n } from '@/i18n';
 
 // Built-in plugins — statically imported so webpack bundles them
-import conversionManifest from './builtin/conversion/manifest';
+import conversionManifestJson from '@shared/plugins/manifests/conversion.json';
+
+const conversionManifest = conversionManifestJson as PluginManifest;
 import ConversionComponent from './builtin/conversion/index';
 
 // System apps — old export pattern, wrapped as PluginBundle
@@ -14,6 +17,9 @@ import * as SettingsMod from '@/pages/Application/Settings';
  * Builtin plugins are compiled into the renderer bundle and registered
  * at module load time. Store plugins are downloaded at runtime and loaded
  * via dynamic evaluation of their JS bundle.
+ *
+ * In dev mode, plugins with a `devServer` config are loaded in iframes
+ * pointing to their own webpack-dev-server for independent HMR.
  *
  * Usage:
  *   await pluginRegistry.init();
@@ -108,7 +114,10 @@ class PluginRegistry {
 
   /**
    * Load installed store plugins from the database.
-   * For each installed plugin, dynamically evaluate the JS bundle.
+   *
+   * Store plugins are ALWAYS loaded in a sandboxed iframe:
+   * - Dev:  iframe loads bundle from plugin's dev server (HMR)
+   * - Prod: iframe inlines the bundle source from disk
    */
   private async loadInstalledPlugins(): Promise<void> {
     if (!window.cham) return;
@@ -121,7 +130,7 @@ class PluginRegistry {
 
     for (const manifest of result.plugins as PluginManifest[]) {
       try {
-        const Component = await this.loadComponent(manifest.id);
+        const Component = await this.loadStorePlugin(manifest);
         this.installed.set(manifest.id, { manifest, Component });
         console.log(`[PluginRegistry] Loaded store plugin: ${manifest.id}`);
       } catch (err: any) {
@@ -133,48 +142,31 @@ class PluginRegistry {
   }
 
   /**
-   * Dynamically load a store plugin's React component from disk.
+   * Load a single store plugin's Component.
    *
-   * The plugin JS bundle is a self-contained module that exposes a
-   * default React component. We use the Function constructor to evaluate
-   * the source in the renderer's sandbox context.
+   * Dev mode (manifest.devServer set): iframe loads from dev server URL.
+   * Prod mode: reads JS bundle from disk, inlines it into iframe srcdoc.
    */
-  private async loadComponent(pluginId: string): Promise<React.ComponentType> {
-    const result = await window.cham.plugin.loadComponent(pluginId);
+  private async loadStorePlugin(manifest: PluginManifest): Promise<React.ComponentType> {
+    const { default: PluginIframe } = await import('./iframe/PluginIframe');
+    const devUrl = (manifest as any).devServer as string | undefined;
+
+    if (devUrl) {
+      // Dev mode: iframe loads from dev server with HMR
+      const IframeWrapper: React.ComponentType = () =>
+        React.createElement(PluginIframe, { pluginId: manifest.id, url: devUrl });
+      return IframeWrapper;
+    }
+
+    // Prod mode: read bundle from disk, inline into iframe
+    const result = await window.cham.plugin.loadComponent(manifest.id);
     if (!result.success || !result.source) {
-      throw new Error(result.error || 'Failed to load component source');
+      throw new Error(result.error || 'Failed to load bundle');
     }
 
-    // Evaluate the plugin source in a controlled sandbox.
-    // We do NOT pass the real `window` object — plugins get only the APIs they need.
-    //
-    // Plugin bundle format:
-    //   var __chamPlugin = (function() { ... return { default: MyComponent }; })();
-    try {
-      // Build a minimal sandbox: only expose `cham` (IPC bridge) and nothing else.
-      // No `document`, no `localStorage`, no `fetch`, no `window` global.
-      const sandbox = {
-        cham: window.cham,
-        // Provide console for debugging, but filtered
-        console: {
-          log: (...args: any[]) => console.log(`[${pluginId}]`, ...args),
-          warn: (...args: any[]) => console.warn(`[${pluginId}]`, ...args),
-          error: (...args: any[]) => console.error(`[${pluginId}]`, ...args),
-        },
-      };
-
-      const fn = new Function(
-        '__sandbox',
-        result.source + ';\nreturn typeof __chamPlugin !== "undefined" ? __chamPlugin.default : null;',
-      );
-      const Component = fn(sandbox);
-      if (!Component) {
-        throw new Error('Plugin did not expose a valid component');
-      }
-      return Component as React.ComponentType;
-    } catch (err: any) {
-      throw new Error(`Component evaluation failed: ${err.message}`);
-    }
+    const IframeWrapper: React.ComponentType = () =>
+      React.createElement(PluginIframe, { pluginId: manifest.id, source: result.source });
+    return IframeWrapper;
   }
 
   // ── Public API ──
@@ -220,9 +212,39 @@ class PluginRegistry {
     }
 
     const manifest = result.manifest as PluginManifest;
-    const Component = await this.loadComponent(manifest.id);
+    const Component = await this.loadStorePlugin(manifest);
     const bundle: PluginBundle = { manifest, Component };
     this.installed.set(manifest.id, bundle);
+    return bundle;
+  }
+
+  /**
+   * Install a local plugin from a folder path (dev mode).
+   * The folder must contain manifest.json and the compiled entry files.
+   */
+  async installLocalPlugin(folderPath: string): Promise<PluginBundle> {
+    if (!window.cham) throw new Error('cham API not available');
+
+    const result = await window.cham.plugin.installLocal(folderPath);
+    if (!result.success || !result.manifest) {
+      throw new Error(result.error || 'Local install failed');
+    }
+
+    const manifest = result.manifest as PluginManifest;
+    const Component = await this.loadStorePlugin(manifest);
+    const bundle: PluginBundle = { manifest, Component };
+    this.installed.set(manifest.id, bundle);
+
+    // Load i18n for the newly installed plugin
+    try {
+      const i18nResult = await window.cham!.plugin.loadI18n(manifest.id);
+      if (i18nResult.success && i18nResult.translations) {
+        registerPluginI18n(i18nResult.translations);
+      }
+    } catch {
+      // i18n is optional
+    }
+
     return bundle;
   }
 

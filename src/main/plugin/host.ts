@@ -1,19 +1,20 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vm from 'vm';
-import { ipcMain, app, BrowserWindow } from 'electron';
+import * as crypto from 'crypto';
+import * as os from 'os';
+import { spawn } from 'child_process';
+import { ipcMain, app, BrowserWindow, dialog } from 'electron';
 import { getDb } from '../db/connection';
 import type { PluginManifest, PluginMainApi, PluginMainModule } from '../../shared/plugin/types';
+import { buildTableSQL } from '../../shared/plugin/types';
+import { httpGet, downloadFile } from '../utils/http';
 
-// Dynamic import for sharp (native module)
+// Lazy-load sharp (native module — may not be available in all environments)
 let _sharp: any = null;
 function getSharp() {
   if (!_sharp) {
-    try {
-      _sharp = require('sharp');
-    } catch {
-      console.error('[PluginHost] sharp is not available');
-    }
+    try { _sharp = require('sharp'); } catch { console.error('[PluginHost] sharp is not available'); }
   }
   return _sharp;
 }
@@ -22,6 +23,8 @@ interface ActivePlugin {
   manifest: PluginManifest;
   pluginDir: string;
   cleanup?: () => void;
+  /** mtime of the main entry file when last activated — used to detect changes for hot reload */
+  mainMtime?: number;
 }
 
 /**
@@ -70,7 +73,6 @@ class PluginHost {
       try {
         // Create plugin-declared tables before activation
         if (manifest.dbTables && manifest.dbTables.length > 0) {
-          const { buildTableSQL } = require('../../shared/plugin/types');
           for (const sql of buildTableSQL(manifest.dbTables)) {
             getDb().exec(sql);
           }
@@ -141,22 +143,51 @@ class PluginHost {
         throw new Error(`Main entry must export a function, got ${typeof mainFn}`);
       }
       const cleanup = await mainFn(api);
+      // Record main file mtime for hot reload detection
+      let mainMtime: number | undefined;
+      if (manifest.main) {
+        try {
+          mainMtime = fs.statSync(path.join(installPath, manifest.main)).mtimeMs;
+        } catch { /* ignore */ }
+      }
       this.active.set(manifest.id, {
         manifest,
         pluginDir: installPath,
         cleanup: typeof cleanup === 'function' ? cleanup : undefined,
+        mainMtime,
       });
       console.log(`[PluginHost] Activated "${manifest.id}" main module`);
     }
   }
 
   /**
-   * Activate a plugin's main module. Safe to call multiple times (idempotent).
+   * Activate a plugin's main module.
+   *
+   * If already active, checks the main entry file's mtime — if the file
+   * has changed, deactivates the old version and loads the new one.
+   * This enables hot reload during store plugin development.
    */
   async activate(manifest: PluginManifest, installPath: string): Promise<void> {
-    if (this.active.has(manifest.id)) {
-      console.log(`[PluginHost] Plugin "${manifest.id}" is already active`);
-      return;
+    const existing = this.active.get(manifest.id);
+    if (existing) {
+      if (manifest.main) {
+        const mainPath = path.join(installPath, manifest.main);
+        try {
+          const currentMtime = fs.statSync(mainPath).mtimeMs;
+          if (existing.mainMtime && currentMtime <= existing.mainMtime) {
+            console.log(`[PluginHost] Plugin "${manifest.id}" is already active (unchanged)`);
+            return;
+          }
+        } catch {
+          // File missing — keep running the old version
+          return;
+        }
+        console.log(`[PluginHost] Plugin "${manifest.id}" changed — hot reloading…`);
+      } else {
+        console.log(`[PluginHost] Plugin "${manifest.id}" is already active`);
+        return;
+      }
+      this.deactivate(manifest.id);
     }
     try {
       await this.activateInternal(manifest, installPath);
@@ -265,11 +296,10 @@ class PluginHost {
   private loadPluginModule(mainPath: string): PluginMainModule {
     const code = fs.readFileSync(mainPath, 'utf-8');
 
-    // Wrap plugin source in a CommonJS-like module IIFE.
-    // Inside this function: `require`, `process`, `__dirname`, `fs`
-    // are NOT available — they are not in the parameter list.
+    // Wrap plugin source in a CommonJS IIFE inside a V8 sandbox context.
+    // Blocks access to require, process, __dirname, fs, globalThis, etc.
     const wrapped = `
-      (function() {
+      return (function() {
         const module = { exports: {} };
         const exports = module.exports;
         ${code}
@@ -278,11 +308,14 @@ class PluginHost {
     `;
 
     try {
-      // vm.compileFunction creates a function that runs in a fresh,
-      // isolated V8 context — no access to the outer scope's globals
+      // Create a sandbox that explicitly removes dangerous globals
+      const sandbox = vm.createContext(Object.create(null), {
+        name: `plugin:${mainPath}`,
+      });
+
       const fn = vm.compileFunction(wrapped, [], {
         filename: mainPath,
-        // Do NOT provide any globals — plugin code only sees `module`, `exports`
+        parsingContext: sandbox,
       });
       const result = fn();
       return (result && result.default) || result;
@@ -435,20 +468,18 @@ class PluginHost {
       // ── Sandboxed Node.js natives ──
       native: {
         crypto: {
-          randomBytes: (size: number) => require('crypto').randomBytes(size),
-          sha256: (data: string | Buffer) =>
-            require('crypto').createHash('sha256').update(data).digest('hex'),
-          md5: (data: string | Buffer) =>
-            require('crypto').createHash('md5').update(data).digest('hex'),
+          randomBytes: (size: number) => crypto.randomBytes(size),
+          sha256: (data: string | Buffer) => crypto.createHash('sha256').update(data).digest('hex'),
+          md5: (data: string | Buffer) => crypto.createHash('md5').update(data).digest('hex'),
         },
         os: {
-          platform: () => require('os').platform(),
-          arch: () => require('os').arch(),
-          cpus: () => require('os').cpus().map((c: any) => ({ model: c.model, speed: c.speed })),
-          totalmem: () => require('os').totalmem(),
-          freemem: () => require('os').freemem(),
-          homedir: () => require('os').homedir(),
-          tmpdir: () => require('os').tmpdir(),
+          platform: () => os.platform(),
+          arch: () => os.arch(),
+          cpus: () => os.cpus().map((c: any) => ({ model: c.model, speed: c.speed })),
+          totalmem: () => os.totalmem(),
+          freemem: () => os.freemem(),
+          homedir: () => os.homedir(),
+          tmpdir: () => os.tmpdir(),
         },
         path: {
           join: (...parts: string[]) => path.join(...parts),
@@ -462,14 +493,28 @@ class PluginHost {
         http: {
           get: async (url: string) => {
             if (!/^https?:\/\//i.test(url)) throw new Error('Only http/https URLs are allowed');
-            const { httpGet } = require('../utils/http');
             return httpGet(url);
           },
           download: async (url: string, destRelativePath: string) => {
             if (!/^https?:\/\//i.test(url)) throw new Error('Only http/https URLs are allowed');
             const dest = PluginHost.resolveSafe(pluginDir, destRelativePath);
-            const { downloadFile } = require('../utils/http');
             await downloadFile(url, dest);
+          },
+          downloadTo: async (url: string, absolutePath: string) => {
+            if (!/^https?:\/\//i.test(url)) throw new Error('Only http/https URLs are allowed');
+            if (!path.isAbsolute(absolutePath)) throw new Error('Absolute path required for downloadTo');
+            await downloadFile(url, absolutePath);
+          },
+        },
+        dialog: {
+          selectFolder: async (): Promise<string> => {
+            const win = this.getMainWindow?.();
+            if (!win) return '';
+            const result = await dialog.showOpenDialog(win, {
+              properties: ['openDirectory', 'createDirectory'],
+            });
+            if (result.canceled || result.filePaths.length === 0) return '';
+            return result.filePaths[0];
           },
         },
         child_process: {
@@ -479,7 +524,6 @@ class PluginHost {
               if (!fs.existsSync(exePath)) {
                 return reject(new Error(`Executable not found: ${relativeExePath}`));
               }
-              const { spawn } = require('child_process');
               const child = spawn(exePath, args, {
                 shell: false,
                 stdio: ['ignore', 'pipe', 'pipe'],
@@ -516,8 +560,8 @@ class PluginHost {
       throw new Error('Absolute paths are not allowed in plugin fs API');
     }
     const resolved = path.resolve(baseDir, relativePath);
-    // Must be inside the base directory
-    if (!resolved.startsWith(path.resolve(baseDir))) {
+    const baseNorm = path.normalize(path.resolve(baseDir)).toLowerCase() + path.sep;
+    if (!path.normalize(resolved).toLowerCase().startsWith(baseNorm)) {
       throw new Error(`Path traversal detected: "${relativePath}"`);
     }
     return resolved;

@@ -32,6 +32,10 @@ module.exports = (_env, argv) => {
     },
     resolve: {
       extensions: ['.tsx', '.ts', '.js'],
+      alias: {
+        '@': path.resolve(__dirname, 'src/web'),
+        '@shared': path.resolve(__dirname, 'src/shared'),
+      },
     },
     output: {
       filename: 'assets/bundle.[contenthash:8].js',
@@ -46,6 +50,12 @@ module.exports = (_env, argv) => {
       new webpack.DefinePlugin({
         'process.env.CHAM_UPDATE_URL': JSON.stringify(
           process.env.CHAM_UPDATE_URL || 'https://cham-download.oss-cn-beijing.aliyuncs.com',
+        ),
+        'process.env.CHAM_STORE_URL': JSON.stringify(
+          process.env.CHAM_STORE_URL || 'https://cham-download.oss-cn-beijing.aliyuncs.com/store',
+        ),
+        'process.env.FOR_DEVELOPMENT': JSON.stringify(
+          process.env.FOR_DEVELOPMENT || 'false',
         ),
       }),
     ],

@@ -16,6 +16,10 @@ export function loadDock(): DockEntry[] {
   return rows;
 }
 
+export function deleteDockEntry(appKey: string): void {
+  getDb().prepare('DELETE FROM dock WHERE app_key = ?').run(appKey);
+}
+
 export function saveDock(entries: DockEntry[]): void {
   const db = getDb();
 

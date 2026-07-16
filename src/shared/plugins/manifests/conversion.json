@@ -1,0 +1,36 @@
+{
+  "id": "conversion",
+  "name": "conversionTool",
+  "version": "1.0.0",
+  "description": "conversionToolDesc",
+  "icon": "image",
+  "color": "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+  "minWidth": 900,
+  "minHeight": 580,
+  "category": "builtin",
+  "permissions": ["fs", "convert", "watch", "settings", "storage"],
+  "entry": "index.tsx",
+  "main": "index.ts",
+  "dbTables": [
+    {
+      "tableName": "conversions",
+      "columns": [
+        { "name": "id", "type": "INTEGER", "constraints": "PRIMARY KEY AUTOINCREMENT" },
+        { "name": "source_id", "type": "TEXT", "constraints": "NOT NULL" },
+        { "name": "format", "type": "TEXT", "constraints": "NOT NULL DEFAULT 'webp'" },
+        { "name": "quality", "type": "INTEGER", "constraints": "NOT NULL DEFAULT 100" },
+        { "name": "output_path", "type": "TEXT", "constraints": "NOT NULL" },
+        { "name": "output_hash", "type": "TEXT", "constraints": "NOT NULL" },
+        { "name": "created_at", "type": "TEXT", "constraints": "DEFAULT (datetime('now'))" },
+        { "name": "updated_at", "type": "TEXT", "constraints": "DEFAULT (datetime('now'))" }
+      ]
+    },
+    {
+      "tableName": "format_options",
+      "columns": [
+        { "name": "format_type", "type": "TEXT", "constraints": "PRIMARY KEY" },
+        { "name": "options", "type": "TEXT", "constraints": "NOT NULL" }
+      ]
+    }
+  ]
+}

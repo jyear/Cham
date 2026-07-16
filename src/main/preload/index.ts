@@ -60,6 +60,7 @@ export interface ChamAPI {
   backgroundSetActive: (id: number) => Promise<{ success: boolean; dataUrl?: string; items?: BackgroundItem[]; error?: string }>;
   backgroundDelete: (id: number) => Promise<{ success: boolean; dataUrl?: string; items?: BackgroundItem[]; error?: string }>;
   backgroundSetFromUrl: (url: string) => Promise<{ success: boolean; dataUrl?: string; items?: BackgroundItem[]; error?: string }>;
+  backgroundSync: () => Promise<{ success: boolean; removed?: number; dataUrl?: string; items?: BackgroundItem[]; error?: string }>;
   // Settings
   loadSettings: () => Promise<{ success: boolean; settings?: Record<string, string>; error?: string }>;
   saveSettings: (settings: Record<string, string>) => Promise<{ success: boolean; error?: string }>;
@@ -70,6 +71,7 @@ export interface ChamAPI {
   getUpdateStatus: () => Promise<any>;
   getLastDownloadPath: () => Promise<string | null>;
   installUpdate: () => Promise<{ success: boolean; error?: string }>;
+  onBackgroundChanged: (cb: (data: { dataUrl: string; items: BackgroundItem[] }) => void) => () => void;
   onUpdateAvailable: (cb: (status: any) => void) => () => void;
   onUpdateProgress: (cb: (data: { progress: number; done?: boolean }) => void) => () => void;
 
@@ -89,10 +91,19 @@ export interface ChamAPI {
   windowIsMaximized: () => Promise<boolean>;
   onWindowStateChanged: (callback: (state: { maximized: boolean }) => void) => () => void;
 
+  // Title bar custom actions
+  registerTitleBarAction: (action: { id: string; icon: string; tooltip: string; pluginId?: string }) => Promise<{ success: boolean }>;
+  removeTitleBarAction: (id: string) => Promise<{ success: boolean }>;
+  getTitleBarActions: () => Promise<Array<{ id: string; icon: string; tooltip: string; pluginId?: string }>>;
+  triggerTitleBarAction: (actionId: string) => Promise<{ success: boolean }>;
+  onTitleBarAction: (callback: (payload: { actionId: string; pluginId?: string }) => void) => () => void;
+  onTitleBarActionsChanged: (callback: (actions: Array<{ id: string; icon: string; tooltip: string; pluginId?: string }>) => void) => () => void;
+
   // Plugin system
   plugin: {
     listInstalled: () => Promise<{ success: boolean; plugins?: any[]; error?: string }>;
     install: (manifestUrl: string) => Promise<{ success: boolean; manifest?: any; error?: string }>;
+    installLocal: (folderPath: string) => Promise<{ success: boolean; manifest?: any; error?: string }>;
     uninstall: (pluginId: string) => Promise<{ success: boolean; error?: string }>;
     fetchManifest: (manifestUrl: string) => Promise<{ success: boolean; manifest?: any; error?: string }>;
     loadComponent: (pluginId: string) => Promise<{ success: boolean; source?: string; error?: string }>;
@@ -125,6 +136,7 @@ contextBridge.exposeInMainWorld('cham', {
   backgroundSetActive: (id: number) => ipcRenderer.invoke('background:set-active', id),
   backgroundDelete: (id: number) => ipcRenderer.invoke('background:delete', id),
   backgroundSetFromUrl: (url: string) => ipcRenderer.invoke('background:setFromUrl', url),
+  backgroundSync: () => ipcRenderer.invoke('background:sync'),
   loadSettings: () => ipcRenderer.invoke('load-settings'),
   saveSettings: (settings: Record<string, string>) => ipcRenderer.invoke('save-settings', settings),
   clearCache: () => ipcRenderer.invoke('plugin:conversion:clear-cache'),
@@ -134,6 +146,11 @@ contextBridge.exposeInMainWorld('cham', {
   getUpdateStatus: () => ipcRenderer.invoke('get-update-status'),
   getLastDownloadPath: () => ipcRenderer.invoke('get-last-download-path'),
   installUpdate: () => ipcRenderer.invoke('install-update'),
+  onBackgroundChanged: (cb: (data: { dataUrl: string; items: BackgroundItem[] }) => void) => {
+    const handler = (_e: any, data: any) => cb(data);
+    ipcRenderer.on('background-changed', handler);
+    return () => ipcRenderer.removeListener('background-changed', handler);
+  },
   onUpdateAvailable: (cb: (status: any) => void) => {
     const handler = (_e: any, s: any) => cb(s);
     ipcRenderer.on('update-available', handler);
@@ -168,10 +185,31 @@ contextBridge.exposeInMainWorld('cham', {
     return () => ipcRenderer.removeListener('window-state-changed', handler);
   },
 
+  // Title bar custom actions
+  registerTitleBarAction: (action: { id: string; icon: string; tooltip: string; pluginId?: string }) =>
+    ipcRenderer.invoke('titlebar:register-action', action),
+  removeTitleBarAction: (id: string) =>
+    ipcRenderer.invoke('titlebar:remove-action', id),
+  getTitleBarActions: () =>
+    ipcRenderer.invoke('titlebar:get-actions'),
+  triggerTitleBarAction: (actionId: string) =>
+    ipcRenderer.invoke('titlebar:trigger-action', actionId),
+  onTitleBarAction: (callback: (payload: { actionId: string; pluginId?: string }) => void) => {
+    const handler = (_e: any, payload: { actionId: string; pluginId?: string }) => callback(payload);
+    ipcRenderer.on('titlebar-action-triggered', handler);
+    return () => ipcRenderer.removeListener('titlebar-action-triggered', handler);
+  },
+  onTitleBarActionsChanged: (callback: (actions: Array<{ id: string; icon: string; tooltip: string; pluginId?: string }>) => void) => {
+    const handler = (_e: any, actions: Array<{ id: string; icon: string; tooltip: string; pluginId?: string }>) => callback(actions);
+    ipcRenderer.on('titlebar-actions-changed', handler);
+    return () => ipcRenderer.removeListener('titlebar-actions-changed', handler);
+  },
+
   // Plugin system
   plugin: {
     listInstalled: () => ipcRenderer.invoke('plugin:listInstalled'),
     install: (manifestUrl: string) => ipcRenderer.invoke('plugin:install', manifestUrl),
+    installLocal: (folderPath: string) => ipcRenderer.invoke('plugin:installLocal', folderPath),
     uninstall: (pluginId: string) => ipcRenderer.invoke('plugin:uninstall', pluginId),
     fetchManifest: (manifestUrl: string) => ipcRenderer.invoke('plugin:fetchManifest', manifestUrl),
     loadComponent: (pluginId: string) => ipcRenderer.invoke('plugin:loadComponent', pluginId),

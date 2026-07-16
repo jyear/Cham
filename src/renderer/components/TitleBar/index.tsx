@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useT } from '@/i18n';
-import Icon from '@/components/Icon';
+import Icon, { type IconType } from '@/components/Icon';
 import Modal from '@/components/Modal';
+import { useWindows } from '@/contexts/WindowContext';
+import { findAppByKey } from '@/utils/appDefs';
 import appIcon from '../../../../assets/icons/icon.png';
 import s from './index.module.css';
 
@@ -28,8 +30,16 @@ interface UpdateStatus {
   error?: string;
 }
 
+interface TitleBarAction {
+  id: string;
+  icon: string;
+  tooltip: string;
+  pluginId?: string;
+}
+
 export default function TitleBar({ maximized }: Props) {
   const { t } = useT();
+  const { openApp } = useWindows();
   const [aboutOpen, setAboutOpen] = useState(false);
   const [updateOpen, setUpdateOpen] = useState(false);
   const [version, setVersion] = useState('');
@@ -39,6 +49,7 @@ export default function TitleBar({ maximized }: Props) {
   const [downloading, setDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [downloadDone, setDownloadDone] = useState(false);
+  const [customActions, setCustomActions] = useState<TitleBarAction[]>([]);
 
   useEffect(() => {
     window.cham?.getAppVersion().then(setVersion);
@@ -48,6 +59,19 @@ export default function TitleBar({ maximized }: Props) {
         setUpdateStatus(status);
       }
     });
+  }, []);
+
+  // Load and listen for custom title bar actions (global only, not plugin-scoped)
+  useEffect(() => {
+    if (window.cham) {
+      window.cham.getTitleBarActions().then((actions) => {
+        setCustomActions(actions.filter((a) => !a.pluginId));
+      });
+    }
+    const unsub = window.cham?.onTitleBarActionsChanged((actions) => {
+      setCustomActions(actions.filter((a) => !a.pluginId));
+    });
+    return () => { if (unsub) unsub(); };
   }, []);
 
   // Listen for silent update check on startup
@@ -117,6 +141,15 @@ export default function TitleBar({ maximized }: Props) {
   const handleMaximize = () => window.cham?.windowMaximize();
   const handleClose = () => window.cham?.windowClose();
 
+  const handleActionClick = (actionId: string) => {
+    window.cham?.triggerTitleBarAction(actionId);
+  };
+
+  const handleOpenSettings = () => {
+    const app = findAppByKey('settings');
+    if (app) openApp(app);
+  };
+
   const hasUpdate = updateStatus?.updateAvailable;
 
   return (
@@ -127,6 +160,16 @@ export default function TitleBar({ maximized }: Props) {
           <span className={s.appTitle}>Cham</span>
         </div>
         <div className={s.controls}>
+          {customActions.map((action) => (
+            <button
+              key={action.id}
+              className={s.ctrlBtn}
+              onClick={() => handleActionClick(action.id)}
+              title={action.tooltip}
+            >
+              <Icon type={action.icon as IconType} size={14} />
+            </button>
+          ))}
           {hasUpdate && (
             <button
               className={`${s.ctrlBtn} ${s.updateBadge}`}
@@ -141,6 +184,9 @@ export default function TitleBar({ maximized }: Props) {
           )}
           <button className={s.ctrlBtn} onClick={() => setAboutOpen(true)} title={t.checkUpdate}>
             <Icon type="info" size={14} />
+          </button>
+          <button className={s.ctrlBtn} onClick={handleOpenSettings} title={t.settings}>
+            <Icon type="settings" size={14} />
           </button>
           <button className={s.ctrlBtn} onClick={handleMinimize} title={t.minimize}>
             <Icon type="minimize" size={12} />

@@ -61,6 +61,7 @@ export class WorkerPool {
   private workers: ChildProcess[] = [];
   private busy: Set<ChildProcess> = new Set();
   private pending: Map<number, Pending> = new Map();
+  private workerTasks: WeakMap<ChildProcess, number> = new WeakMap();
   private queue: Array<{
     id: number;
     msg: any;
@@ -164,10 +165,15 @@ export class WorkerPool {
       this.busy.delete(worker);
       this.workers = this.workers.filter((w) => w !== worker);
 
-      // Fail all pending tasks on this worker
-      for (const [id, p] of this.pending) {
-        p.reject(new Error(`Worker exited with code ${code}`));
-        this.pending.delete(id);
+      // Fail only the task assigned to this specific worker
+      const taskId = this.workerTasks.get(worker);
+      if (taskId !== undefined) {
+        const p = this.pending.get(taskId);
+        if (p) {
+          p.reject(new Error(`Worker exited with code ${code}`));
+          this.pending.delete(taskId);
+        }
+        this.workerTasks.delete(worker);
       }
 
       // Auto-restart unless shutting down
@@ -194,6 +200,7 @@ export class WorkerPool {
   ): void {
     this.busy.add(worker);
     this.pending.set(id, { resolve, reject });
+    this.workerTasks.set(worker, id);
     worker.send({ id, ...task });
   }
 

@@ -56,6 +56,7 @@ declare global {
     backgroundSetActive: (id: number) => Promise<{ success: boolean; dataUrl?: string; items?: BackgroundItem[]; error?: string }>;
     backgroundDelete: (id: number) => Promise<{ success: boolean; dataUrl?: string; items?: BackgroundItem[]; error?: string }>;
     backgroundSetFromUrl: (url: string) => Promise<{ success: boolean; dataUrl?: string; items?: BackgroundItem[]; error?: string }>;
+    backgroundSync: () => Promise<{ success: boolean; removed?: number; dataUrl?: string; items?: BackgroundItem[]; error?: string }>;
     loadSettings: () => Promise<{ success: boolean; settings?: Record<string, string>; error?: string }>;
     saveSettings: (settings: Record<string, string>) => Promise<{ success: boolean; error?: string }>;
     clearCache: () => Promise<{ success: boolean; error?: string }>;
@@ -65,6 +66,7 @@ declare global {
     getUpdateStatus: () => Promise<any>;
     getLastDownloadPath: () => Promise<string | null>;
     installUpdate: () => Promise<{ success: boolean; error?: string }>;
+    onBackgroundChanged: (cb: (data: { dataUrl: string; items: BackgroundItem[] }) => void) => () => void;
     onUpdateAvailable: (cb: (status: any) => void) => () => void;
     onUpdateProgress: (cb: (data: { progress: number; done?: boolean }) => void) => () => void;
     watchStart: (folderPath: string) => Promise<{ success: boolean; error?: string }>;
@@ -79,9 +81,17 @@ declare global {
     windowIsMaximized: () => Promise<boolean>;
     onWindowStateChanged: (callback: (state: { maximized: boolean }) => void) => () => void;
 
+    registerTitleBarAction: (action: { id: string; icon: string; tooltip: string; pluginId?: string }) => Promise<{ success: boolean }>;
+    removeTitleBarAction: (id: string) => Promise<{ success: boolean }>;
+    getTitleBarActions: () => Promise<Array<{ id: string; icon: string; tooltip: string; pluginId?: string }>>;
+    triggerTitleBarAction: (actionId: string) => Promise<{ success: boolean }>;
+    onTitleBarAction: (callback: (payload: { actionId: string; pluginId?: string }) => void) => () => void;
+    onTitleBarActionsChanged: (callback: (actions: Array<{ id: string; icon: string; tooltip: string; pluginId?: string }>) => void) => () => void;
+
     plugin: {
       listInstalled: () => Promise<{ success: boolean; plugins?: any[]; error?: string }>;
       install: (manifestUrl: string) => Promise<{ success: boolean; manifest?: any; error?: string }>;
+      installLocal: (folderPath: string) => Promise<{ success: boolean; manifest?: any; error?: string }>;
       uninstall: (pluginId: string) => Promise<{ success: boolean; error?: string }>;
       fetchManifest: (manifestUrl: string) => Promise<{ success: boolean; manifest?: any; error?: string }>;
       loadComponent: (pluginId: string) => Promise<{ success: boolean; source?: string; error?: string }>;

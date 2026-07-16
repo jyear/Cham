@@ -18,7 +18,8 @@ export type IconType =
   | 'restore'
   | 'home'
   | 'apps'
-  | 'image';
+  | 'image'
+  | 'bing';
 
 interface Props {
   type: IconType;
@@ -207,6 +208,16 @@ const paths: Record<IconType, { viewBox: string; path: React.ReactNode }> = {
           strokeLinejoin="round"
         />
       </>
+    ),
+  },
+
+  bing: {
+    viewBox: '0 0 32 32',
+    path: (
+      <path
+        d="m4.807 0 6.391 2.25v22.495l9.005-5.193-4.411-2.073-2.786-6.932 14.188 4.984v7.245L11.204 32l-6.396-3.563z"
+        fill="currentColor"
+      />
     ),
   },
 };

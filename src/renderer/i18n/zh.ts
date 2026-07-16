@@ -136,6 +136,7 @@ const zh = {
   storeBrowseHint: '切换到「发现」标签页浏览可用插件',
   storeNoStorePlugins: '暂无可用插件',
   storeRefresh: '刷新',
+  addLocalApp: '添加本地应用',
 
   // Misc
   minimize: '最小化',

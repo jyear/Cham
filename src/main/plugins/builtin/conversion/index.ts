@@ -16,46 +16,11 @@ import { makeSourceId, findBySourceId, upsert as upsertConversion, clearAll as c
 import { save as saveFormatOptions, load as loadFormatOptions } from './db/formatOptions';
 import { WorkerPool } from './worker-pool';
 import { watch, type FSWatcher } from 'chokidar';
-import type { PluginManifest, PluginMainApi } from '../../../../shared/plugin/types';
+import type { PluginMainApi } from '../../../../shared/plugin/types';
+import manifestJson from '../../../../shared/plugins/manifests/conversion.json';
+import type { PluginManifest } from '../../../../shared/plugin/types';
 
-// ── Plugin Manifest ──
-
-export const manifest: PluginManifest = {
-  id: 'conversion',
-  name: 'conversionTool',
-  version: '1.0.0',
-  description: 'conversionToolDesc',
-  icon: 'image',
-  color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-  minWidth: 900,
-  minHeight: 580,
-  category: 'builtin',
-  permissions: ['fs', 'convert', 'watch', 'settings', 'storage'],
-  entry: 'index.js',
-  main: 'conversion.js',
-  dbTables: [
-    {
-      tableName: 'conversions',
-      columns: [
-        { name: 'id', type: 'INTEGER', constraints: 'PRIMARY KEY AUTOINCREMENT' },
-        { name: 'source_id', type: 'TEXT', constraints: 'NOT NULL' },
-        { name: 'format', type: 'TEXT', constraints: "NOT NULL DEFAULT 'webp'" },
-        { name: 'quality', type: 'INTEGER', constraints: 'NOT NULL DEFAULT 100' },
-        { name: 'output_path', type: 'TEXT', constraints: 'NOT NULL' },
-        { name: 'output_hash', type: 'TEXT', constraints: 'NOT NULL' },
-        { name: 'created_at', type: 'TEXT', constraints: "DEFAULT (datetime('now'))" },
-        { name: 'updated_at', type: 'TEXT', constraints: "DEFAULT (datetime('now'))" },
-      ],
-    },
-    {
-      tableName: 'format_options',
-      columns: [
-        { name: 'format_type', type: 'TEXT', constraints: 'PRIMARY KEY' },
-        { name: 'options', type: 'TEXT', constraints: 'NOT NULL' },
-      ],
-    },
-  ],
-};
+export const manifest = manifestJson as PluginManifest;
 
 // ── Singleton pool ──
 

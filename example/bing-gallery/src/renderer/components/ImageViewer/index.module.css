@@ -1,0 +1,113 @@
+.bing-viewer {
+  position: absolute;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  animation: bing-fadeIn 0.2s ease;
+}
+
+@keyframes bing-fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.bing-viewer-content {
+  position: relative;
+  max-width: 90vw;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.bing-viewer-content img {
+  max-width: 100%;
+  max-height: 65vh;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.bing-viewer-close {
+  position: absolute;
+  top: -16px;
+  right: -16px;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+  color: #fff;
+  font-size: 22px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease;
+}
+
+.bing-viewer-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.bing-viewer-info {
+  text-align: center;
+  color: #fff;
+}
+
+.bing-viewer-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.bing-viewer-copyright {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 12px;
+}
+
+.bing-viewer-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.bing-btn {
+  padding: 6px 16px;
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bing-btn-primary {
+  background: var(--accent, #15aabf);
+  color: #fff;
+  border-color: var(--accent, #15aabf);
+}
+
+.bing-btn-primary:hover {
+  background: #1098ad;
+}
+
+.bing-btn-secondary {
+  background: transparent;
+  border-color: var(--accent, #15aabf);
+  color: var(--accent, #15aabf);
+}
+
+.bing-btn-secondary:hover {
+  background: rgba(21, 170, 191, 0.1);
+}

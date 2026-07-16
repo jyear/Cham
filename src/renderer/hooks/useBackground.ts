@@ -44,6 +44,16 @@ export function useBackground() {
       }
       setLoaded(true);
     });
+
+    // Listen for background changes pushed from main process
+    // (e.g. when a plugin calls backgroundSetFromUrl)
+    const unsub = window.cham.onBackgroundChanged((data) => {
+      if (data.items) setItems(data.items);
+      if (data.dataUrl && getEnabled()) {
+        applyBackground(data.dataUrl);
+      }
+    });
+    return unsub;
   }, []);
 
   // Toggle enabled

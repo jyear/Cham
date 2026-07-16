@@ -1,0 +1,28 @@
+.bing-tabs {
+  display: flex;
+  background: var(--bg-secondary, #1a1a24);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.bing-tab {
+  padding: 6px 16px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary, #888);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.bing-tab:hover {
+  color: var(--text-primary, #e0e0e0);
+}
+
+.bing-tab-active {
+  background: var(--bg-tertiary, #252536);
+  color: var(--accent, #15aabf);
+}

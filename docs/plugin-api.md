@@ -146,7 +146,7 @@ const { folderPath, files } = await window.cham.selectFolder();
 // 选择输出目录
 const outputDir: string | null = await window.cham.selectOutputDir();
 
-// 获取文件 SHA-256 哈希
+// 获取文件 MD5 哈希
 const { hash } = await window.cham.getFileHash('/path/to/file.png');
 
 // 读取图片为 base64 DataURL
@@ -271,7 +271,7 @@ const { items } = await window.cham.plugin.listItems('my-plugin');
 await window.cham.plugin.removeItem('my-plugin', 'lastPreset');
 ```
 
-> 🔒 推荐使用 `usePluginStorage(pluginId)` hook 替代直接调用——自动绑定 pluginId，插件无法伪造。
+> 🔒 主进程中通过 `api.db` 操作 `plugin_store` 表读写 KV 存储，自动绑定 pluginId。
 
 #### Plugin IPC 调用
 
@@ -469,7 +469,7 @@ api.log.error('Failed to process:', err.message);
 api.sendEvent('watch-change', { event: 'add', file: { path, name, size, ext } });
 ```
 
-实际 channel 为 `plugin:<pluginId>:watch-change`，渲染进程通过 `window.cham.onWatchChange(cb)` 订阅。
+实际 channel 为 `plugin:<pluginId>:watch-change`，渲染进程通过 `window.cham.plugin.subscribe('<id>', 'watch-change', cb)` 订阅。
 
 ### Hook 系统（跨插件通信）
 
@@ -608,7 +608,7 @@ module.exports = function(api) {
 | 边界 | 机制 |
 |------|------|
 | **渲染进程沙箱** | `contextIsolation: true` + `nodeIntegration: false` — 插件代码无法直接访问 Node.js API |
-| **插件 bundle 执行** | `new Function()` 传入最小沙箱对象 `{ cham, console }`，不暴露 `window`/`document` |
+| **插件 bundle 执行** | `new Function()` 执行在渲染进程全局作用域，由 Electron `contextIsolation: true` + `nodeIntegration: false` 提供沙箱隔离 |
 | **主进程模块加载** | `vm.compileFunction()` 替代 `require()` — `require`/`process`/`fs` 不在作用域中 |
 | **文件系统** | `api.fs` 限制在插件安装目录内，`delete-file`/`delete-dir` IPC 限制在 `userData`+`temp` 内 |
 | **数据库** | SQL 黑名单拦截 ATTACH/DROP/ALTER/PRAGMA 等，表名强制 `plugin_` 前缀 |

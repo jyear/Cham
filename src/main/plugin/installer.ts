@@ -3,6 +3,7 @@ import * as path from 'path';
 import { app } from 'electron';
 import { getDb } from '../db/connection';
 import { insertManifest, deleteManifest, clearStoreItems } from '../db/plugins';
+import { deleteDockEntry } from '../db/dock';
 import type { PluginManifest, DbTableDeclaration } from '../../shared/plugin/types';
 import { buildTableSQL } from '../../shared/plugin/types';
 import { pluginHost } from './host';
@@ -62,7 +63,7 @@ function validateManifest(m: any): m is PluginManifest {
   if (m.dbTables) {
     if (!Array.isArray(m.dbTables)) return false;
     for (const t of m.dbTables) {
-      if (typeof t.tableName !== 'string' || !t.tableName.startsWith('plugin_')) return false;
+      if (typeof t.tableName !== 'string' || !t.tableName) return false;
       if (!Array.isArray(t.columns)) return false;
     }
   }
@@ -97,41 +98,40 @@ export async function installPlugin(manifestUrl: string): Promise<PluginManifest
   const manifest = await fetchManifest(manifestUrl);
   const pluginDir = getPluginDir(manifest.id);
 
-  // Download the renderer bundle (manifest.entry)
-  const bundleUrl = manifestUrl.replace(/manifest\.json$/, manifest.entry);
-  const destPath = path.join(pluginDir, manifest.entry);
+  // Resolve bundle URLs relative to the manifest URL (handles query params correctly)
+  const baseUrl = manifestUrl.replace(/\/[^\/]*$/, '/');
 
-  await downloadFile(bundleUrl, destPath);
-  console.log(`[plugin] Downloaded renderer: ${bundleUrl}`);
+  try {
+    const bundleUrl = new URL(manifest.entry, baseUrl).href;
+    const destPath = path.join(pluginDir, manifest.entry);
+    await downloadFile(bundleUrl, destPath);
 
-  // Download the main process bundle if declared
-  if (manifest.main) {
-    const mainUrl = manifestUrl.replace(/manifest\.json$/, manifest.main);
-    const mainDest = path.join(pluginDir, manifest.main);
-    await downloadFile(mainUrl, mainDest);
-    console.log(`[plugin] Downloaded main module: ${mainUrl}`);
+    if (manifest.main) {
+      const mainUrl = new URL(manifest.main, baseUrl).href;
+      await downloadFile(mainUrl, path.join(pluginDir, manifest.main));
+    }
+
+    // Create tables and register in DB — only after all downloads succeed
+    if (manifest.dbTables && manifest.dbTables.length > 0) {
+      createPluginTables(manifest.id, manifest.dbTables);
+    }
+
+    // Register in the database.
+    // NOTE: We do NOT activate the main module here — hooks only become
+    // active on next app startup via pluginHost.start().
+    insertManifest(manifest.id, manifest, pluginDir, manifest.version);
+
+    if (manifest.main) {
+      console.log(`[plugin] ${manifest.id} has a main module — will activate on next restart`);
+    }
+
+    console.log(`[plugin] Installed ${manifest.id} v${manifest.version}`);
+    return manifest;
+  } catch (err) {
+    // Clean up on failure: remove partially downloaded files
+    try { fs.rmSync(pluginDir, { recursive: true, force: true }); } catch {}
+    throw err;
   }
-
-  // Create declared database tables
-  if (manifest.dbTables && manifest.dbTables.length > 0) {
-    createPluginTables(manifest.id, manifest.dbTables);
-    console.log(`[plugin] Created ${manifest.dbTables.length} table(s) for ${manifest.id}`);
-  }
-
-  // Register in the database.
-  // NOTE: We do NOT activate the main module here.
-  // Hooks and custom IPC handlers only become active on next app startup
-  // (via pluginHost.start()), so that a freshly installed plugin cannot
-  // immediately inject hooks or handlers into the running session.
-  insertManifest(manifest.id, manifest, pluginDir, manifest.version);
-
-  if (manifest.main) {
-    console.log(`[plugin] ${manifest.id} has a main module — will activate on next restart`);
-  }
-
-  console.log(`[plugin] Installed ${manifest.id} v${manifest.version}`);
-
-  return manifest;
 }
 
 /**
@@ -162,6 +162,9 @@ export async function uninstallPlugin(pluginId: string): Promise<void> {
 
   // Clear plugin KV store
   clearStoreItems(pluginId);
+
+  // Remove from dock (in case user pinned it)
+  deleteDockEntry(pluginId);
 
   // Remove from registry
   deleteManifest(pluginId);

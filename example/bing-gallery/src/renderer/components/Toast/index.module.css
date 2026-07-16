@@ -1,0 +1,25 @@
+.bing-toast {
+  position: fixed;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2000;
+  padding: 10px 24px;
+  background: var(--bg-secondary, #252536);
+  color: var(--text-primary, #e0e0e0);
+  font-size: 13px;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  animation: bing-slideUp 0.3s ease;
+}
+
+@keyframes bing-slideUp {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}

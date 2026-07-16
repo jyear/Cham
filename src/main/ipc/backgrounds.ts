@@ -2,9 +2,12 @@ import { ipcMain, dialog, app, type BrowserWindow } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
-import { add, getAll, setSelected, remove, type BackgroundRecord } from '../db';
+import { watch, type FSWatcher } from 'chokidar';
+import { add, getAll, setSelected, remove, getByHash, type BackgroundRecord } from '../db';
 import { getMimeType } from '../../shared/utils/mime';
 import { downloadFile } from '../utils/http';
+
+// ── Helpers ──
 
 function getBgDir(): string {
   const dir = path.join(app.getPath('userData'), 'backgrounds');
@@ -12,6 +15,11 @@ function getBgDir(): string {
     fs.mkdirSync(dir, { recursive: true });
   }
   return dir;
+}
+
+function computeFileHash(filePath: string): string {
+  const data = fs.readFileSync(filePath);
+  return crypto.createHash('md5').update(data).digest('hex');
 }
 
 function fileToDataUrl(filePath: string): string {
@@ -29,8 +37,80 @@ function recordToItem(r: BackgroundRecord) {
   };
 }
 
+// ── Consistency check ──
+
+/** Remove DB records whose backing files have been deleted.
+ *  Auto-selects the most recent remaining if the active one was removed.
+ *  Returns the count of removed records. */
+function syncBackgrounds(win: BrowserWindow | null): number {
+  const records = getAll();
+  let removed = 0;
+
+  for (const r of records) {
+    if (!fs.existsSync(r.path)) {
+      remove(r.id);
+      removed++;
+    }
+  }
+
+  if (removed > 0) {
+    // If the active background was removed, pick a new one
+    const remaining = getAll();
+    if (remaining.length > 0 && !remaining.some((r) => r.selected === 1)) {
+      setSelected(remaining[0].id);
+    }
+    // Push update so UI reflects the change
+    if (win) {
+      const refreshed = getAll();
+      const active = refreshed.find((r) => r.selected === 1);
+      const dataUrl = active ? fileToDataUrl(active.path) : '';
+      const items = refreshed.map(recordToItem);
+      win.webContents.send('background-changed', { dataUrl, items });
+    }
+  }
+
+  return removed;
+}
+
+// ── Folder watcher ──
+
+let bgWatcher: FSWatcher | null = null;
+
+function startBgWatcher(getWin: () => BrowserWindow | null): void {
+  if (bgWatcher) return;
+  const bgDir = getBgDir();
+  bgWatcher = watch(bgDir, { ignoreInitial: true });
+  bgWatcher.on('unlink', () => {
+    const removed = syncBackgrounds(getWin());
+    if (removed > 0) {
+      console.log(`[background] Watcher: removed ${removed} orphaned record(s)`);
+    }
+  });
+}
+
+function stopBgWatcher(): void {
+  if (bgWatcher) {
+    bgWatcher.close();
+    bgWatcher = null;
+  }
+}
+
+// ── Notify helper ──
+
+function notifyRenderer(win: BrowserWindow | null) {
+  if (!win) return;
+  const records = getAll();
+  const active = records.find((r) => r.selected === 1);
+  const dataUrl = active ? fileToDataUrl(active.path) : '';
+  const items = records.map(recordToItem);
+  win.webContents.send('background-changed', { dataUrl, items });
+}
+
+// ── IPC Handlers ──
+
 export function registerBackgroundHandlers(getMainWindow: () => BrowserWindow | null): void {
-  // List all backgrounds
+
+  // ── List all backgrounds ──
   ipcMain.handle('background:list', async () => {
     try {
       const records = getAll();
@@ -40,7 +120,7 @@ export function registerBackgroundHandlers(getMainWindow: () => BrowserWindow | 
     }
   });
 
-  // Select and add a new background image
+  // ── Select and add a new background image (file picker) ──
   ipcMain.handle('background:select', async () => {
     try {
       const win = getMainWindow();
@@ -59,14 +139,25 @@ export function registerBackgroundHandlers(getMainWindow: () => BrowserWindow | 
       }
 
       const srcPath = result.filePaths[0];
+
+      // Dedup: compute hash before copying
+      const fileHash = computeFileHash(srcPath);
+      const existing = getByHash(fileHash);
+      if (existing) {
+        // Already in library — just select it
+        setSelected(existing.id);
+        notifyRenderer(win);
+        return { success: true, items: getAll().map(recordToItem), duplicate: true };
+      }
+
+      // New file — copy and register
       const ext = path.extname(srcPath);
       const uniqueName = `${crypto.randomBytes(8).toString('hex')}${ext}`;
       const destPath = path.join(getBgDir(), uniqueName);
-
       fs.copyFileSync(srcPath, destPath);
 
       const filename = path.basename(srcPath);
-      const record = add(destPath, filename);
+      const record = add(destPath, filename, fileHash);
 
       // Auto-select first background if none was selected before
       const all = getAll();
@@ -81,7 +172,7 @@ export function registerBackgroundHandlers(getMainWindow: () => BrowserWindow | 
     }
   });
 
-  // Set active background
+  // ── Set active background ──
   ipcMain.handle('background:set-active', async (_event, id: number) => {
     try {
       setSelected(id);
@@ -94,7 +185,7 @@ export function registerBackgroundHandlers(getMainWindow: () => BrowserWindow | 
     }
   });
 
-  // Delete a background
+  // ── Delete a background ──
   ipcMain.handle('background:delete', async (_event, id: number) => {
     try {
       const record = remove(id);
@@ -123,10 +214,9 @@ export function registerBackgroundHandlers(getMainWindow: () => BrowserWindow | 
     }
   });
 
-  // Set background from URL (for plugins)
+  // ── Set background from URL (for plugins) ──
   ipcMain.handle('background:setFromUrl', async (_event, url: string) => {
     try {
-      // Download to backgrounds directory
       const bgDir = getBgDir();
       const ext = path.extname(new URL(url).pathname).toLowerCase() || '.jpg';
       const filename = `bg_${Date.now()}${ext}`;
@@ -135,22 +225,72 @@ export function registerBackgroundHandlers(getMainWindow: () => BrowserWindow | 
       await downloadFile(url, destPath);
       console.log('[background] Downloaded from URL:', url);
 
-      // Register in DB
-      add(destPath, filename);
+      // Dedup: compute hash and check for existing
+      const fileHash = computeFileHash(destPath);
+      const existing = getByHash(fileHash);
+      if (existing) {
+        // Duplicate — delete the just-downloaded file, select existing record
+        try { fs.unlinkSync(destPath); } catch { /* ignore */ }
+        setSelected(existing.id);
+        console.log('[background] Duplicate detected, reusing existing record:', existing.id);
 
-      // Set as active
-      const records = getAll();
-      const inserted = records[records.length - 1];
-      if (inserted) {
-        setSelected(inserted.id);
+        const refreshed = getAll();
+        const active = refreshed.find((r) => r.selected === 1);
+        const dataUrl = active ? fileToDataUrl(active.path) : '';
+        const items = refreshed.map(recordToItem);
+
+        const win = getMainWindow();
+        if (win) {
+          win.webContents.send('background-changed', { dataUrl, items });
+        }
+
+        return { success: true, dataUrl, items, duplicate: true };
       }
 
-      const active = records.find((r) => r.selected === 1);
-      const dataUrl = active ? fileToDataUrl(active.path) : '';
+      // New image — register in DB and set as active
+      const inserted = add(destPath, filename, fileHash);
+      setSelected(inserted.id);
 
-      return { success: true, dataUrl, items: records.map(recordToItem) };
+      const refreshed = getAll();
+      const active = refreshed.find((r) => r.selected === 1);
+      const dataUrl = active ? fileToDataUrl(active.path) : '';
+      const items = refreshed.map(recordToItem);
+
+      const win = getMainWindow();
+      if (win) {
+        win.webContents.send('background-changed', { dataUrl, items });
+      }
+
+      return { success: true, dataUrl, items };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  // ── Manual sync: check DB ↔ folder consistency ──
+  ipcMain.handle('background:sync', async () => {
+    try {
+      const win = getMainWindow();
+      const removed = syncBackgrounds(win);
+      const items = getAll().map(recordToItem);
+      const active = getAll().find((r) => r.selected === 1);
+      const dataUrl = active ? fileToDataUrl(active.path) : '';
+      return { success: true, removed, dataUrl, items };
     } catch (error: any) {
       return { success: false, error: error.message };
     }
   });
 }
+
+/** Run startup consistency check + begin folder watching.
+ *  Must be called AFTER initDb(). */
+export function initBackgrounds(getMainWindow: () => BrowserWindow | null): void {
+  const removed = syncBackgrounds(getMainWindow());
+  if (removed > 0) {
+    console.log(`[background] Startup sync: removed ${removed} orphaned record(s)`);
+  }
+  startBgWatcher(getMainWindow);
+}
+
+/** Call on app quit to clean up the folder watcher. */
+export { stopBgWatcher };

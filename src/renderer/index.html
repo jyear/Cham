@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-eval'; img-src 'self' file: data:; connect-src 'self' http://localhost:* ws://localhost:*" />
+  <meta name="referrer" content="no-referrer" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-eval' 'unsafe-inline' http://localhost:*; img-src 'self' file: data: https:; connect-src 'self' http://localhost:* ws://localhost:* https://cham-download.oss-cn-beijing.aliyuncs.com; frame-src 'self' http://localhost:*; child-src 'self' http://localhost:*;" />
   <title>Cham - Image Converter</title>
 </head>
 <body>

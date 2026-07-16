@@ -164,19 +164,18 @@ export default function(api: any) {
     api.fs.remove('output');
   });
 
-  // 使用 KV 存储保存设置
+  // 使用 KV 存储（通过 api.db 操作 plugin_store 表）
   api.registerHandler('savePreset', async (_e: any, preset: any) => {
-    const presets = JSON.parse(await api.pluginGetItem('presets') || '[]');
+    const row = api.db.prepare(
+      'SELECT value FROM plugin_store WHERE plugin_id = ? AND key = ?'
+    ).get(api.pluginId, 'presets') as { value: string } | undefined;
+    const presets = row ? JSON.parse(row.value) : [];
     presets.push(preset);
-    await api.pluginSetItem('presets', JSON.stringify(presets));
+    api.db.prepare(
+      'INSERT OR REPLACE INTO plugin_store (plugin_id, key, value) VALUES (?, ?, ?)'
+    ).run(api.pluginId, 'presets', JSON.stringify(presets));
     return { success: true };
   });
-}
-
-// 辅助：封装 KV API，自动绑定 pluginId
-async function pluginGetItem(this: any, key: string) {
-  // 主进程中用 api.db 读写 plugin_store
-  return null; // 由宿主 preload 提供
 }
 ```
 
@@ -325,7 +324,7 @@ export default function(api: any) {
 
 ---
 
-## 8. 完整 API 参考
+## 9. 完整 API 参考
 
 ### 渲染进程 (`window.cham`)
 
@@ -334,7 +333,7 @@ export default function(api: any) {
 | `selectFiles()` | 打开文件选择 |
 | `selectFolder()` | 打开文件夹选择 |
 | `selectOutputDir()` | 选择输出目录 |
-| `getFileHash(path)` | 获取文件 SHA-256 |
+| `getFileHash(path)` | 获取文件 MD5 |
 | `readImage(path)` | 读取图片为 dataURL |
 | `loadSettings()` / `saveSettings(s)` | 应用设置 |
 | `clearCache()` | 清空缓存（→ 触发 `cache:clear` 钩子）|

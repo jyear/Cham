@@ -2,10 +2,16 @@ import { ipcMain, dialog, type BrowserWindow } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
 
+function getWin(getMainWindow: () => BrowserWindow | null): BrowserWindow {
+  const win = getMainWindow();
+  if (!win) throw new Error('Main window not available');
+  return win;
+}
+
 export function registerFileHandlers(getMainWindow: () => BrowserWindow | null): void {
   // Select files (any type)
   ipcMain.handle('select-files', async () => {
-    const result = await dialog.showOpenDialog(getMainWindow()!, {
+    const result = await dialog.showOpenDialog(getWin(getMainWindow), {
       title: 'Select files',
       filters: [
         { name: 'All Files', extensions: ['*'] },
@@ -31,7 +37,7 @@ export function registerFileHandlers(getMainWindow: () => BrowserWindow | null):
 
   // Select folder and return files + folder path
   ipcMain.handle('select-folder', async () => {
-    const result = await dialog.showOpenDialog(getMainWindow()!, {
+    const result = await dialog.showOpenDialog(getWin(getMainWindow), {
       title: 'Select folder',
       properties: ['openDirectory'],
     });
@@ -63,7 +69,7 @@ export function registerFileHandlers(getMainWindow: () => BrowserWindow | null):
 
   // Select output directory
   ipcMain.handle('select-output-dir', async () => {
-    const result = await dialog.showOpenDialog(getMainWindow()!, {
+    const result = await dialog.showOpenDialog(getWin(getMainWindow), {
       title: 'Select output directory',
       properties: ['openDirectory', 'createDirectory'],
     });

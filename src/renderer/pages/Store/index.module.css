@@ -24,6 +24,7 @@
 /* ── Tabs ── */
 .tabs {
   display: flex;
+  align-items: center;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   padding: 0 20px;
   flex-shrink: 0;
@@ -48,6 +49,24 @@
 .tabActive {
   color: #fff;
   border-bottom-color: var(--primary, #667eea);
+}
+
+.addLocalBtn {
+  margin-left: auto;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #15aabf;
+  cursor: pointer;
+  border: 1px solid rgba(21, 170, 191, 0.3);
+  border-radius: 8px;
+  background: rgba(21, 170, 191, 0.08);
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.addLocalBtn:hover {
+  background: rgba(21, 170, 191, 0.16);
+  border-color: rgba(21, 170, 191, 0.5);
 }
 
 /* ── Content ── */

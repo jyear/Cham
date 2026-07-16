@@ -27,7 +27,6 @@ module.exports = (_env, argv) => {
     resolve: {
       extensions: ['.ts', '.js'],
       alias: {
-        '@': path.resolve(__dirname, 'src/main'),
         '@shared': path.resolve(__dirname, 'src/shared'),
       },
     },
@@ -42,6 +41,9 @@ module.exports = (_env, argv) => {
         ),
         'process.env.CHAM_STORE_URL': JSON.stringify(
           process.env.CHAM_STORE_URL || 'https://cham-download.oss-cn-beijing.aliyuncs.com/store',
+        ),
+        'process.env.FOR_DEVELOPMENT': JSON.stringify(
+          process.env.FOR_DEVELOPMENT || 'false',
         ),
       }),
     ],

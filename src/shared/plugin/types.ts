@@ -25,7 +25,7 @@ export interface DbColumnDeclaration {
 
 /**
  * A table the plugin wants created in the app's SQLite database.
- * Table name MUST start with "plugin_" to avoid collisions.
+ * Table name SHOULD start with "plugin_" to avoid collisions with core tables.
  */
 export interface DbTableDeclaration {
   tableName: string;
@@ -71,6 +71,13 @@ export interface PluginManifest {
      Relative path to the entry module (for builtin: relative import path;
      for store: filename inside the bundle, e.g. "index.js"). */
   entry: string;
+
+  /* ── Dev Server (optional) ──
+     If set and NODE_ENV=development, the plugin is loaded in an iframe
+     pointing to this URL instead of being evaluated via new Function().
+     Each plugin gets its own HMR via its webpack-dev-server.
+     Example: "http://localhost:3001" */
+  devServer?: string;
 
   /* ── Main Process Entry (optional, Phase 2) ──
      If present, the main process will require() this file and call its
@@ -216,6 +223,12 @@ export interface PluginMainApi {
       get(url: string): Promise<string>;
       /** Download a URL to a file in the plugin directory */
       download(url: string, destRelativePath: string): Promise<void>;
+      /** Download a URL to an absolute file path (outside plugin sandbox) */
+      downloadTo(url: string, absolutePath: string): Promise<void>;
+    };
+    dialog: {
+      /** Open a folder selection dialog and return the selected path, or empty string if cancelled */
+      selectFolder(): Promise<string>;
     };
     /**
      * Execute a bundled executable from the plugin directory.

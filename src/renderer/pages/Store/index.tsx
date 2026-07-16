@@ -11,11 +11,13 @@ const STORE_INDEX_URL = `${process.env.CHAM_STORE_URL || 'https://cham-download.
 
 type TabKey = 'installed' | 'discover';
 
+const isDev = process.env.FOR_DEVELOPMENT === 'true';
+
 export default function Store() {
   const { t } = useT();
   const navigate = useNavigate();
   const { openApp } = useWindows();
-  const { bundles, builtins, installed, loading, installPlugin, uninstallPlugin } = usePluginRegistry();
+  const { bundles, builtins, installed, loading, error, installPlugin, installLocalPlugin, uninstallPlugin } = usePluginRegistry();
   const [tab, setTab] = useState<TabKey>('installed');
   const [storeIndex, setStoreIndex] = useState<StoreIndex | null>(null);
   const [storeLoading, setStoreLoading] = useState(false);
@@ -53,6 +55,17 @@ export default function Store() {
     }
   }, [installPlugin]);
 
+  const handleAddLocal = useCallback(async () => {
+    if (!window.cham) return;
+    const folder = await window.cham.selectOutputDir();
+    if (!folder) return;
+    try {
+      await installLocalPlugin(folder);
+    } catch (err: any) {
+      console.error('[Store] installLocalPlugin failed:', err);
+    }
+  }, [installLocalPlugin]);
+
   const handleUninstall = useCallback(async (pluginId: string) => {
     try {
       await uninstallPlugin(pluginId);
@@ -61,7 +74,9 @@ export default function Store() {
     }
   }, [uninstallPlugin]);
 
-  const handleOpenApp = useCallback((bundle: typeof bundles[number]) => {
+  const handleOpenApp = useCallback(async (bundle: typeof bundles[number]) => {
+    // Store plugins always use the iframe Component from the registry.
+    // No need to reload from disk — PluginIframe handles everything.
     const app: AppDefinition = {
       key: bundle.manifest.id,
       icon: bundle.manifest.icon as any,
@@ -73,7 +88,6 @@ export default function Store() {
       minHeight: bundle.manifest.minHeight,
       Component: bundle.Component,
     };
-    // Pass raw i18n keys — translation happens at render time in AppWindow
     openApp(app);
     navigate('/');
   }, [openApp, navigate]);
@@ -97,7 +111,15 @@ export default function Store() {
           >
             {t.storeDiscover || 'Discover'}
           </button>
+          {isDev && (
+            <button className={s.addLocalBtn} onClick={handleAddLocal}>
+              + {t.addLocalApp || 'Add Local App'}
+            </button>
+          )}
         </div>
+
+        {/* Error */}
+        {error && <div className={s.error}>{error}</div>}
 
         {/* Content */}
         <div className={s.content}>
