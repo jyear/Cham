@@ -6,8 +6,10 @@ interface ImageViewerProps {
   image: ViewableImage | null;
   onClose: () => void;
   onDownload: (img: BingImage | FavoriteImage) => void;
-  onSetBackground: (img: BingImage | FavoriteImage) => void;
-  onSetBackgroundFromPath: (filePath: string) => void;
+  onSetAppBackground: (img: BingImage | FavoriteImage) => void;
+  onSetDesktopBackground: (img: BingImage | FavoriteImage) => void;
+  onSetAppBackgroundFromPath: (filePath: string) => void;
+  onSetDesktopBackgroundFromPath: (filePath: string) => void;
   t: Record<string, string>;
 }
 
@@ -15,7 +17,7 @@ function isDownloadRecord(img: ViewableImage): img is DownloadRecord {
   return 'localPath' in img && 'imageUrl' in img && !('time' in img || 'createdAt' in img);
 }
 
-export function ImageViewer({ image, onClose, onDownload, onSetBackground, onSetBackgroundFromPath, t }: ImageViewerProps) {
+export function ImageViewer({ image, onClose, onDownload, onSetAppBackground, onSetDesktopBackground, onSetAppBackgroundFromPath, onSetDesktopBackgroundFromPath, t }: ImageViewerProps) {
   const [localSrc, setLocalSrc] = useState('');
 
   useEffect(() => {
@@ -74,13 +76,25 @@ export function ImageViewer({ image, onClose, onDownload, onSetBackground, onSet
               className="bing-btn bing-btn-secondary"
               onClick={() => {
                 if (isLocal) {
-                  onSetBackgroundFromPath((image as DownloadRecord).localPath);
+                  onSetAppBackgroundFromPath((image as DownloadRecord).localPath);
                 } else {
-                  onSetBackground(image as BingImage | FavoriteImage);
+                  onSetAppBackground(image as BingImage | FavoriteImage);
                 }
               }}
             >
-              {t.setAsBackground}
+              {t.setAsAppBackground}
+            </button>
+            <button
+              className="bing-btn bing-btn-secondary"
+              onClick={() => {
+                if (isLocal) {
+                  onSetDesktopBackgroundFromPath((image as DownloadRecord).localPath);
+                } else {
+                  onSetDesktopBackground(image as BingImage | FavoriteImage);
+                }
+              }}
+            >
+              {t.setAsDesktopBackground}
             </button>
           </div>
         </div>

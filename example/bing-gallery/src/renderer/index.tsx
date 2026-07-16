@@ -269,10 +269,27 @@ function BingGallery() {
     }
   }
 
-  async function handleSetBackgroundFromPath(filePath: string) {
+  // ── Set App Background (Cham internal library only) ──
+
+  async function handleSetAppBackgroundFromPath(filePath: string) {
     if (!window.cham) return;
     try {
       const result = await (window.cham as any).backgroundSet(filePath);
+      if (!result?.success) {
+        showToast(t.errorLoading);
+        return;
+      }
+      showToast(t.backgroundSet);
+    } catch {
+      showToast(t.errorLoading);
+    }
+  }
+
+  async function handleSetAppBackground(image: BingImage | FavoriteImage) {
+    if (!window.cham) return;
+    const imgUrl = "fullUrl" in image ? (image as BingImage).fullUrl : image.url;
+    try {
+      const result = await (window.cham as any).backgroundSet(imgUrl);
       if (result?.success) {
         showToast(t.backgroundSet);
       } else {
@@ -283,15 +300,55 @@ function BingGallery() {
     }
   }
 
-  async function handleSetBackground(image: BingImage | FavoriteImage) {
+  // ── Set Desktop Background (system wallpaper) ──
+
+  async function handleSetDesktopBackgroundFromPath(filePath: string) {
+    if (!window.cham) return;
+    try {
+      const wpResult = await window.cham.plugin.call(
+        "bing-gallery",
+        "wallpaper:set",
+        filePath,
+      );
+      if (wpResult?.success) {
+        showToast(t.backgroundSet);
+      } else {
+        showToast(t.errorLoading);
+      }
+    } catch {
+      showToast(t.errorLoading);
+    }
+  }
+
+  async function handleSetDesktopBackground(image: BingImage | FavoriteImage) {
     if (!window.cham || settingBgRef.current) return;
     const imgUrl =
       "fullUrl" in image ? (image as BingImage).fullUrl : image.url;
 
     settingBgRef.current = true;
     try {
-      const result = await (window.cham as any).backgroundSet(imgUrl);
-      if (result?.success) {
+      // Download locally first so we have a file path for wallpaper:set
+      const fileName = `bing-wallpaper-${Date.now()}.jpg`;
+      const dlResult = await window.cham.plugin.call(
+        "bing-gallery",
+        "download-image",
+        {
+          imageUrl: imgUrl,
+          fullUrl: imgUrl,
+          copyright: image.copyright || "",
+          title: image.title || "",
+          hash: "hash" in image ? (image as BingImage).hash : "",
+          fileName,
+        },
+      );
+
+      if (dlResult?.success && dlResult.path) {
+        // Set as system desktop wallpaper
+        await window.cham.plugin.call(
+          "bing-gallery",
+          "wallpaper:set",
+          dlResult.path,
+        );
         showToast(t.backgroundSet);
       } else {
         showToast(t.errorLoading);
@@ -384,7 +441,8 @@ function BingGallery() {
                 image={img}
                 isFavorite={isFavorite(img)}
                 onDownload={handleDownload}
-                onSetBackground={handleSetBackground}
+                onSetAppBackground={handleSetAppBackground}
+                onSetDesktopBackground={handleSetDesktopBackground}
                 onToggleFavorite={handleToggleFavorite}
                 onViewFull={setViewerImage}
                 t={t}
@@ -419,8 +477,10 @@ function BingGallery() {
         image={viewerImage}
         onClose={() => setViewerImage(null)}
         onDownload={handleDownload}
-        onSetBackground={handleSetBackground}
-        onSetBackgroundFromPath={handleSetBackgroundFromPath}
+        onSetAppBackground={handleSetAppBackground}
+        onSetDesktopBackground={handleSetDesktopBackground}
+        onSetAppBackgroundFromPath={handleSetAppBackgroundFromPath}
+        onSetDesktopBackgroundFromPath={handleSetDesktopBackgroundFromPath}
         t={t}
       />
 

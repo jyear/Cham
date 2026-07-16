@@ -290,6 +290,53 @@ module.exports = function bingGalleryMain(api) {
     });
   });
 
+  // ── Set Wallpaper ──
+  // Uses windows-wallpaper-x86-64.exe bundled in dist/dependence/
+  // The exe path varies: in dev mode pluginDir is dist/ so just "dependence/...",
+  // in production pluginDir is the plugin root so "dist/dependence/..."
+  var WALLPAPER_EXE_PATHS = [
+    'dependence/windows-wallpaper-x86-64.exe',
+    'dist/dependence/windows-wallpaper-x86-64.exe',
+  ];
+
+  function setWallpaperBinary(filePath) {
+    function tryPath(index) {
+      if (index >= WALLPAPER_EXE_PATHS.length) {
+        return Promise.reject(new Error(
+          'Wallpaper executable not found at: ' + WALLPAPER_EXE_PATHS.join(', ')
+        ));
+      }
+      return api.native.child_process.execFile(
+        WALLPAPER_EXE_PATHS[index],
+        ['set', filePath, '--scale', 'fill'],
+        { timeout: 10000 }
+      ).then(function (result) {
+        if (result.exitCode !== 0) {
+          throw new Error(result.stderr || 'Exit code ' + result.exitCode);
+        }
+        return result;
+      }).catch(function (err) {
+        var msg = err && err.message ? err.message : String(err);
+        // "not found" → try next path; other errors → propagate
+        if (msg.indexOf('not found') !== -1 || msg.indexOf('ENOENT') !== -1) {
+          return tryPath(index + 1);
+        }
+        throw err;
+      });
+    }
+    return tryPath(0);
+  }
+
+  api.registerHandler('wallpaper:set', function (_event, filePath) {
+    return setWallpaperBinary(filePath).then(function () {
+      api.log.info('Wallpaper set: ' + filePath);
+      return { success: true };
+    }).catch(function (err) {
+      api.log.error('Wallpaper set error: ' + (err && err.message ? err.message : String(err)));
+      return { success: false, error: err && err.message ? err.message : 'Unknown error' };
+    });
+  });
+
   // ── Clear Cache Hook ──
   api.registerHook('cache:clear', function () {
     cache.clear();

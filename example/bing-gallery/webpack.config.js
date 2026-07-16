@@ -82,6 +82,7 @@ module.exports = [
         { from: 'manifest.json', to: 'dist/manifest.json' },
         { from: 'i18n/en.json', to: 'dist/i18n/en.json' },
         { from: 'i18n/zh.json', to: 'dist/i18n/zh.json' },
+        { from: 'node_modules/wallpaper/source/windows-wallpaper-x86-64.exe', to: 'dist/dependence/windows-wallpaper-x86-64.exe' },
       ]),
     ],
   },

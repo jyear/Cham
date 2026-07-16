@@ -6,7 +6,7 @@
   "scripts": {
     "build": "webpack --mode production",
     "watch": "webpack --watch --mode development",
-    "dev":"npx webpack serve --mode development --config webpack.config.js --port 3001"
+    "dev": "npx webpack serve --mode development --config webpack.config.js --port 3001"
   },
   "devDependencies": {
     "@types/react": "^18.0.0",
@@ -20,5 +20,8 @@
     "webpack": "^5.90.0",
     "webpack-cli": "^5.1.0",
     "webpack-dev-server": "^6.0.0"
+  },
+  "dependencies": {
+    "wallpaper": "^7.3.1"
   }
 }

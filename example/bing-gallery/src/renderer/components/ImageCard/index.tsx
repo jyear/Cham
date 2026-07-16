@@ -6,7 +6,8 @@ interface ImageCardProps {
   image: BingImage | FavoriteImage;
   isFavorite: boolean;
   onDownload: (img: BingImage | FavoriteImage) => void;
-  onSetBackground: (img: BingImage | FavoriteImage) => void;
+  onSetAppBackground: (img: BingImage | FavoriteImage) => void;
+  onSetDesktopBackground: (img: BingImage | FavoriteImage) => void;
   onToggleFavorite: (img: BingImage | FavoriteImage) => void;
   onViewFull: (img: BingImage | FavoriteImage) => void;
   t: Record<string, string>;
@@ -16,7 +17,8 @@ export function ImageCard({
   image,
   isFavorite,
   onDownload,
-  onSetBackground,
+  onSetAppBackground,
+  onSetDesktopBackground,
   onToggleFavorite,
   onViewFull,
   t,
@@ -38,6 +40,9 @@ export function ImageCard({
         <div className="card-overlay">
           <div className="card-overlay-bg" />
           <div className="card-overlay-content">
+            {"time" in image && (image as BingImage).time && (
+              <div className="card-date">{(image as BingImage).time}</div>
+            )}
             <div className="card-meta">
               {image.copyright && (
                 <div style={{ opacity: 0.7 }}>{image.copyright}</div>
@@ -91,9 +96,9 @@ export function ImageCard({
                   className="btn-icon"
                   onClick={(e) => {
                     e.stopPropagation();
-                    onSetBackground(image);
+                    onSetAppBackground(image);
                   }}
-                  title={t.setAsBackground}
+                  title={t.setAsAppBackground}
                 >
                   <svg
                     width={15}
@@ -108,10 +113,29 @@ export function ImageCard({
                     <line x1={12} y1={17} x2={12} y2={21} />
                   </svg>
                 </button>
+                <button
+                  className="btn-icon"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSetDesktopBackground(image);
+                  }}
+                  title={t.setAsDesktopBackground}
+                >
+                  <svg
+                    width={15}
+                    height={15}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <rect x={3} y={3} width={18} height={14} rx={2} />
+                    <path d="M7 21h10" />
+                    <line x1={12} y1={17} x2={12} y2={21} />
+                    <rect x={7} y={6} width={10} height={8} rx={1} />
+                  </svg>
+                </button>
               </div>
-              {"time" in image && (image as BingImage).time && (
-                <div className="card-date">{(image as BingImage).time}</div>
-              )}
             </div>
           </div>
         </div>
