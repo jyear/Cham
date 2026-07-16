@@ -23,19 +23,19 @@ export function ImageCard({
 }: ImageCardProps) {
   return (
     <div className="card-wrapper">
-      <div className="card">
+      <div className="card" onClick={() => onViewFull(image)}>
         {/* Image */}
-        <div className="card-image" onClick={() => onViewFull(image)}>
+        <div className="card-image">
           <img src={image.url} alt={image.title || ""} loading="lazy" />
         </div>
 
         {/* Title — always visible, bottom of image */}
-        <div className="card-title" onClick={() => onViewFull(image)}>
+        <div className="card-title">
           {image.title || "Bing Wallpaper"}
         </div>
 
-        {/* Overlay — visible on hover, stop clicks from reaching image */}
-        <div className="card-overlay" onClick={(e) => e.stopPropagation()}>
+        {/* Overlay — visible on hover */}
+        <div className="card-overlay">
           <div className="card-overlay-bg" />
           <div className="card-overlay-content">
             <div className="card-meta">
