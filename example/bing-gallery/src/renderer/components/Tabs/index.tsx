@@ -23,6 +23,12 @@ export function Tabs({ activeTab, onChange, t }: TabsProps) {
       >
         {t.favorites}
       </button>
+      <button
+        className={`bing-tab ${activeTab === 'downloads' ? 'bing-tab-active' : ''}`}
+        onClick={() => onChange('downloads')}
+      >
+        {t.downloads}
+      </button>
     </div>
   );
 }

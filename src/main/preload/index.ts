@@ -59,7 +59,7 @@ export interface ChamAPI {
   backgroundSelect: () => Promise<{ success: boolean; items?: BackgroundItem[]; error?: string }>;
   backgroundSetActive: (id: number) => Promise<{ success: boolean; dataUrl?: string; items?: BackgroundItem[]; error?: string }>;
   backgroundDelete: (id: number) => Promise<{ success: boolean; dataUrl?: string; items?: BackgroundItem[]; error?: string }>;
-  backgroundSetFromUrl: (url: string) => Promise<{ success: boolean; dataUrl?: string; items?: BackgroundItem[]; error?: string }>;
+  backgroundSet: (input: string) => Promise<{ success: boolean; dataUrl?: string; items?: BackgroundItem[]; error?: string }>;
   backgroundSync: () => Promise<{ success: boolean; removed?: number; dataUrl?: string; items?: BackgroundItem[]; error?: string }>;
   // Settings
   loadSettings: () => Promise<{ success: boolean; settings?: Record<string, string>; error?: string }>;
@@ -135,7 +135,7 @@ contextBridge.exposeInMainWorld('cham', {
   backgroundSelect: () => ipcRenderer.invoke('background:select'),
   backgroundSetActive: (id: number) => ipcRenderer.invoke('background:set-active', id),
   backgroundDelete: (id: number) => ipcRenderer.invoke('background:delete', id),
-  backgroundSetFromUrl: (url: string) => ipcRenderer.invoke('background:setFromUrl', url),
+  backgroundSet: (input: string) => ipcRenderer.invoke('background:set', input),
   backgroundSync: () => ipcRenderer.invoke('background:sync'),
   loadSettings: () => ipcRenderer.invoke('load-settings'),
   saveSettings: (settings: Record<string, string>) => ipcRenderer.invoke('save-settings', settings),

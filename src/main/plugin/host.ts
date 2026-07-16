@@ -4,7 +4,7 @@ import * as vm from 'vm';
 import * as crypto from 'crypto';
 import * as os from 'os';
 import { spawn } from 'child_process';
-import { ipcMain, app, BrowserWindow, dialog } from 'electron';
+import { ipcMain, app, BrowserWindow, dialog, shell } from 'electron';
 import { getDb } from '../db/connection';
 import type { PluginManifest, PluginMainApi, PluginMainModule } from '../../shared/plugin/types';
 import { buildTableSQL } from '../../shared/plugin/types';
@@ -516,6 +516,24 @@ class PluginHost {
             if (result.canceled || result.filePaths.length === 0) return '';
             return result.filePaths[0];
           },
+        },
+        shell: {
+          showItemInFolder: (filePath: string): void => {
+            shell.showItemInFolder(filePath);
+          },
+        },
+        readImage: (absolutePath: string): string => {
+          if (!path.isAbsolute(absolutePath)) throw new Error('Absolute path required');
+          const data = fs.readFileSync(absolutePath);
+          const ext = path.extname(absolutePath).toLowerCase();
+          const mimeMap: Record<string, string> = {
+            '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+            '.png': 'image/png', '.webp': 'image/webp',
+            '.avif': 'image/avif', '.gif': 'image/gif',
+            '.bmp': 'image/bmp', '.svg': 'image/svg+xml',
+          };
+          const mime = mimeMap[ext] || 'image/png';
+          return `data:${mime};base64,${data.toString('base64')}`;
         },
         child_process: {
           execFile: (relativeExePath: string, args: string[] = [], options?: { timeout?: number }) =>

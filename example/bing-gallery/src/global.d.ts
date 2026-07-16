@@ -37,7 +37,7 @@ interface ChamWindow {
   onTitleBarAction(callback: (payload: { actionId: string; pluginId?: string }) => void): () => void;
   onTitleBarActionsChanged(callback: (actions: Array<{ id: string; icon: string; tooltip: string; pluginId?: string }>) => void): () => void;
   plugin: ChamPluginApi;
-  backgroundSetFromUrl(url: string): Promise<void>;
+  backgroundSet(input: string): Promise<{ success: boolean; dataUrl?: string; items?: any[]; error?: string }>;
 }
 
 declare global {

@@ -214,42 +214,18 @@ export function registerBackgroundHandlers(getMainWindow: () => BrowserWindow | 
     }
   });
 
-  // ── Set background from URL (for plugins) ──
-  ipcMain.handle('background:setFromUrl', async (_event, url: string) => {
-    try {
-      const bgDir = getBgDir();
-      const ext = path.extname(new URL(url).pathname).toLowerCase() || '.jpg';
-      const filename = `bg_${Date.now()}${ext}`;
-      const destPath = path.join(bgDir, filename);
-
-      await downloadFile(url, destPath);
-      console.log('[background] Downloaded from URL:', url);
-
-      // Dedup: compute hash and check for existing
-      const fileHash = computeFileHash(destPath);
-      const existing = getByHash(fileHash);
-      if (existing) {
-        // Duplicate — delete the just-downloaded file, select existing record
-        try { fs.unlinkSync(destPath); } catch { /* ignore */ }
-        setSelected(existing.id);
-        console.log('[background] Duplicate detected, reusing existing record:', existing.id);
-
-        const refreshed = getAll();
-        const active = refreshed.find((r) => r.selected === 1);
-        const dataUrl = active ? fileToDataUrl(active.path) : '';
-        const items = refreshed.map(recordToItem);
-
-        const win = getMainWindow();
-        if (win) {
-          win.webContents.send('background-changed', { dataUrl, items });
-        }
-
-        return { success: true, dataUrl, items, duplicate: true };
-      }
-
-      // New image — register in DB and set as active
-      const inserted = add(destPath, filename, fileHash);
-      setSelected(inserted.id);
+  // ── Shared: register a file (already on disk in bgDir) into the DB and select it ──
+  function registerAndSelect(
+    filePath: string,
+    sourceFilename: string,
+  ): { success: true; dataUrl: string; items: ReturnType<typeof recordToItem>[]; duplicate?: boolean } {
+    const fileHash = computeFileHash(filePath);
+    const existing = getByHash(fileHash);
+    if (existing) {
+      // Already in library — clean up the temp file, select existing
+      try { fs.unlinkSync(filePath); } catch { /* ignore */ }
+      setSelected(existing.id);
+      console.log('[background] Duplicate detected, reusing:', existing.id);
 
       const refreshed = getAll();
       const active = refreshed.find((r) => r.selected === 1);
@@ -257,11 +233,50 @@ export function registerBackgroundHandlers(getMainWindow: () => BrowserWindow | 
       const items = refreshed.map(recordToItem);
 
       const win = getMainWindow();
-      if (win) {
-        win.webContents.send('background-changed', { dataUrl, items });
-      }
+      if (win) win.webContents.send('background-changed', { dataUrl, items });
 
-      return { success: true, dataUrl, items };
+      return { success: true, dataUrl, items, duplicate: true };
+    }
+
+    // New image — register in DB and set as active
+    const inserted = add(filePath, sourceFilename, fileHash);
+    setSelected(inserted.id);
+
+    const refreshed = getAll();
+    const active = refreshed.find((r) => r.selected === 1);
+    const dataUrl = active ? fileToDataUrl(active.path) : '';
+    const items = refreshed.map(recordToItem);
+
+    const win = getMainWindow();
+    if (win) win.webContents.send('background-changed', { dataUrl, items });
+
+    return { success: true, dataUrl, items };
+  }
+
+  // ── Unified: set background from URL or local file path ──
+  ipcMain.handle('background:set', async (_event, input: string) => {
+    try {
+      const bgDir = getBgDir();
+      const isUrl = /^https?:\/\//i.test(input);
+
+      if (isUrl) {
+        const ext = path.extname(new URL(input).pathname).toLowerCase() || '.jpg';
+        const filename = `bg_${Date.now()}${ext}`;
+        const destPath = path.join(bgDir, filename);
+        await downloadFile(input, destPath);
+        console.log('[background] Downloaded from URL:', input);
+        return registerAndSelect(destPath, filename);
+      } else {
+        if (!fs.existsSync(input)) {
+          return { success: false, error: 'File not found' };
+        }
+        const ext = path.extname(input).toLowerCase() || '.jpg';
+        const filename = `bg_${Date.now()}${ext}`;
+        const destPath = path.join(bgDir, filename);
+        fs.copyFileSync(input, destPath);
+        console.log('[background] Copied from path:', input);
+        return registerAndSelect(destPath, path.basename(input));
+      }
     } catch (error: any) {
       return { success: false, error: error.message };
     }

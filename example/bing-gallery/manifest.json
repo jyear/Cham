@@ -29,6 +29,20 @@
         { "name": "key", "type": "TEXT", "constraints": "PRIMARY KEY" },
         { "name": "value", "type": "TEXT" }
       ]
+    },
+    {
+      "tableName": "plugin_bing_downloads",
+      "columns": [
+        { "name": "id", "type": "INTEGER", "constraints": "PRIMARY KEY AUTOINCREMENT" },
+        { "name": "image_url", "type": "TEXT", "constraints": "NOT NULL" },
+        { "name": "full_url", "type": "TEXT" },
+        { "name": "copyright", "type": "TEXT" },
+        { "name": "title", "type": "TEXT" },
+        { "name": "hash", "type": "TEXT" },
+        { "name": "local_path", "type": "TEXT", "constraints": "NOT NULL" },
+        { "name": "file_name", "type": "TEXT", "constraints": "NOT NULL" },
+        { "name": "downloaded_at", "type": "TEXT", "constraints": "DEFAULT (datetime('now'))" }
+      ]
     }
   ]
 }

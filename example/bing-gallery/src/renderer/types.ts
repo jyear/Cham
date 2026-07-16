@@ -17,4 +17,18 @@ export interface FavoriteImage {
   createdAt: string;
 }
 
-export type TabType = 'daily' | 'favorites';
+export interface DownloadRecord {
+  id: number;
+  imageUrl: string;
+  fullUrl: string;
+  copyright: string;
+  title: string;
+  hash: string;
+  localPath: string;
+  fileName: string;
+  downloadedAt: string;
+}
+
+export type ViewableImage = BingImage | FavoriteImage | DownloadRecord;
+
+export type TabType = 'daily' | 'favorites' | 'downloads';

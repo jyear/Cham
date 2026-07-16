@@ -1,22 +1,58 @@
-import React from 'react';
-import type { BingImage, FavoriteImage } from '../../types';
+import React, { useState, useEffect } from 'react';
+import type { BingImage, FavoriteImage, DownloadRecord, ViewableImage } from '../../types';
 import './index.module.css';
 
 interface ImageViewerProps {
-  image: BingImage | FavoriteImage | null;
+  image: ViewableImage | null;
   onClose: () => void;
   onDownload: (img: BingImage | FavoriteImage) => void;
   onSetBackground: (img: BingImage | FavoriteImage) => void;
+  onSetBackgroundFromPath: (filePath: string) => void;
   t: Record<string, string>;
 }
 
-export function ImageViewer({ image, onClose, onDownload, onSetBackground, t }: ImageViewerProps) {
+function isDownloadRecord(img: ViewableImage): img is DownloadRecord {
+  return 'localPath' in img && 'imageUrl' in img && !('time' in img || 'createdAt' in img);
+}
+
+export function ImageViewer({ image, onClose, onDownload, onSetBackground, onSetBackgroundFromPath, t }: ImageViewerProps) {
+  const [localSrc, setLocalSrc] = useState('');
+
+  useEffect(() => {
+    if (!image || !isDownloadRecord(image)) {
+      setLocalSrc('');
+      return;
+    }
+
+    let cancelled = false;
+    if (window.cham) {
+      window.cham.plugin.call('bing-gallery', 'read-local-image', { filePath: image.localPath })
+        .then((result) => {
+          if (!cancelled && result?.success && result.dataUrl) {
+            setLocalSrc(result.dataUrl);
+          }
+        })
+        .catch(() => {});
+    }
+    return () => { cancelled = true; };
+  }, [image]);
+
   if (!image) return null;
 
-  const imgUrl = 'fullUrl' in image ? (image as BingImage).fullUrl : image.url;
-  const copyrightText = image.copyright || '';
+  const isLocal = isDownloadRecord(image);
+  const imgUrl = isLocal
+    ? (localSrc || (image as DownloadRecord).imageUrl)
+    : ('fullUrl' in image ? (image as BingImage).fullUrl : image.url);
+
+  const copyrightText = isLocal
+    ? (image as DownloadRecord).copyright || ''
+    : image.copyright || '';
+  const displayTitle = isLocal
+    ? ((image as DownloadRecord).title || (image as DownloadRecord).fileName || '')
+    : (image.title || 'Bing Wallpaper');
+
   const match = copyrightText.match(/^(.+?)\s*\(©/);
-  const displayTitle = match ? match[1] : copyrightText;
+  const displayCopyright = match ? match[1] : copyrightText;
 
   return (
     <div className="bing-viewer" onClick={onClose}>
@@ -29,10 +65,21 @@ export function ImageViewer({ image, onClose, onDownload, onSetBackground, t }: 
           <div className="bing-viewer-title">{displayTitle || 'Bing Wallpaper'}</div>
           {copyrightText && <div className="bing-viewer-copyright">© {copyrightText}</div>}
           <div className="bing-viewer-actions">
-            <button className="bing-btn bing-btn-primary" onClick={() => onDownload(image)}>
-              {t.download}
-            </button>
-            <button className="bing-btn bing-btn-secondary" onClick={() => onSetBackground(image)}>
+            {!isLocal && (
+              <button className="bing-btn bing-btn-primary" onClick={() => onDownload(image as BingImage | FavoriteImage)}>
+                {t.download}
+              </button>
+            )}
+            <button
+              className="bing-btn bing-btn-secondary"
+              onClick={() => {
+                if (isLocal) {
+                  onSetBackgroundFromPath((image as DownloadRecord).localPath);
+                } else {
+                  onSetBackground(image as BingImage | FavoriteImage);
+                }
+              }}
+            >
               {t.setAsBackground}
             </button>
           </div>

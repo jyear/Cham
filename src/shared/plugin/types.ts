@@ -230,6 +230,15 @@ export interface PluginMainApi {
       /** Open a folder selection dialog and return the selected path, or empty string if cancelled */
       selectFolder(): Promise<string>;
     };
+    shell: {
+      /** Show the given file in the system file manager (selects it in its parent folder) */
+      showItemInFolder(filePath: string): void;
+    };
+    /**
+     * Read an image file from an absolute path and return a base64 data URL.
+     * Supports jpg, png, webp, avif, gif, bmp, svg.
+     */
+    readImage(absolutePath: string): string;
     /**
      * Execute a bundled executable from the plugin directory.
      *

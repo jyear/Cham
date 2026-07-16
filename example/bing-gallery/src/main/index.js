@@ -98,11 +98,31 @@ module.exports = function bingGalleryMain(api) {
         // Table may not exist yet, fall through
       }
 
+      // Save download record helper
+      function saveRecord(absPath, fileName) {
+        try {
+          api.db.prepare(
+            'INSERT INTO plugin_bing_downloads (image_url, full_url, copyright, title, hash, local_path, file_name) VALUES (?, ?, ?, ?, ?, ?, ?)'
+          ).run(
+            params.imageUrl || '',
+            params.fullUrl || '',
+            params.copyright || '',
+            params.title || '',
+            params.hash || '',
+            absPath,
+            fileName
+          );
+        } catch (dbErr) {
+          api.log.warn('Failed to save download record: ' + (dbErr && dbErr.message ? dbErr.message : String(dbErr)));
+        }
+      }
+
       if (savePath) {
         // Use absolute path download
         var absPath = api.native.path.join(savePath, params.fileName);
         return api.native.http.downloadTo(params.imageUrl, absPath).then(function () {
           api.log.info('Downloaded: ' + params.fileName + ' to ' + savePath);
+          saveRecord(absPath, params.fileName);
           return { success: true, path: absPath };
         }).catch(function (err) {
           api.log.error('Download failed: ' + (err && err.message ? err.message : String(err)));
@@ -113,6 +133,8 @@ module.exports = function bingGalleryMain(api) {
         var destPath = 'downloads/' + params.fileName;
         return api.native.http.download(params.imageUrl, destPath).then(function () {
           api.log.info('Downloaded: ' + params.fileName + ' to plugin downloads/');
+          var absFallbackPath = api.native.path.join(api.pluginDir, destPath);
+          saveRecord(absFallbackPath, params.fileName);
           return { success: true, path: destPath };
         }).catch(function (err) {
           api.log.error('Download failed: ' + (err && err.message ? err.message : String(err)));
@@ -194,6 +216,65 @@ module.exports = function bingGalleryMain(api) {
       api.db.prepare(
         'INSERT OR REPLACE INTO plugin_bing_settings (key, value) VALUES (?, ?)'
       ).run(params.key, params.value);
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  // ── List Downloads ──
+  api.registerHandler('list-downloads', function () {
+    try {
+      var rows = api.db.prepare(
+        'SELECT id, image_url, full_url, copyright, title, hash, local_path, file_name, downloaded_at FROM plugin_bing_downloads ORDER BY downloaded_at DESC'
+      ).all();
+      return {
+        success: true,
+        records: rows.map(function (row) {
+          return {
+            id: row.id,
+            imageUrl: row.image_url,
+            fullUrl: row.full_url,
+            copyright: row.copyright,
+            title: row.title,
+            hash: row.hash,
+            localPath: row.local_path,
+            fileName: row.file_name,
+            downloadedAt: row.downloaded_at,
+          };
+        }),
+      };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  // ── Open Folder (reveal file in system file manager) ──
+  api.registerHandler('open-folder', function (_event, params) {
+    try {
+      api.native.shell.showItemInFolder(params.filePath);
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  // ── Read Local Image (for thumbnails) ──
+  api.registerHandler('read-local-image', function (_event, params) {
+    try {
+      var dataUrl = api.native.readImage(params.filePath);
+      return { success: true, dataUrl: dataUrl };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  // ── Delete Download Record ──
+  api.registerHandler('delete-download', function (_event, params) {
+    try {
+      api.db.prepare(
+        'DELETE FROM plugin_bing_downloads WHERE id = ?'
+      ).run(params.id);
       return { success: true };
     } catch (error) {
       return { success: false, error: error.message };

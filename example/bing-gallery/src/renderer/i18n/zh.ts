@@ -26,6 +26,13 @@ const zh: Record<string, string> = {
   save: '保存',
   saved: '设置已保存',
   downloadPathRequired: '请先设置下载保存路径',
+  downloads: '下载记录',
+  downloadRecords: '下载记录',
+  noDownloads: '暂无下载记录',
+  openFolder: '打开文件夹',
+  downloadedAt: '下载时间',
+  localPath: '保存位置',
+  deleteRecord: '删除记录',
 };
 
 export default zh;

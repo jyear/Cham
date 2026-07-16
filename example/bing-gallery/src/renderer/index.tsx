@@ -8,7 +8,8 @@ import { Toast } from "@/components/Toast";
 import { Spinner } from "@/components/Spinner";
 import { EmptyState } from "@/components/EmptyState";
 import { SettingsModal } from "@/components/SettingsModal";
-import type { BingImage, FavoriteImage, TabType } from "@/types";
+import { DownloadRecords } from "@/components/DownloadRecords";
+import type { BingImage, FavoriteImage, DownloadRecord, ViewableImage, TabType } from "@/types";
 import "./styles/global.css";
 
 function BingGallery() {
@@ -18,11 +19,11 @@ function BingGallery() {
   const [images, setImages] = useState<BingImage[]>([]);
   const [favorites, setFavorites] = useState<FavoriteImage[]>([]);
   const [favoriteUrls, setFavoriteUrls] = useState<Set<string>>(new Set());
+  const [downloadRecords, setDownloadRecords] = useState<DownloadRecord[]>([]);
+  const [downloadsLoading, setDownloadsLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [viewerImage, setViewerImage] = useState<
-    BingImage | FavoriteImage | null
-  >(null);
+  const [viewerImage, setViewerImage] = useState<ViewableImage | null>(null);
   const [toast, setToast] = useState({ message: "", visible: false });
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -89,6 +90,9 @@ function BingGallery() {
   useEffect(() => {
     if (activeTab === "favorites" && window.cham) {
       loadFavorites();
+    }
+    if (activeTab === "downloads" && window.cham) {
+      loadDownloadRecords();
     }
   }, [activeTab]);
 
@@ -185,6 +189,24 @@ function BingGallery() {
     }
   }
 
+  async function loadDownloadRecords() {
+    if (!window.cham) return;
+    setDownloadsLoading(true);
+    try {
+      const result = await window.cham.plugin.call(
+        "bing-gallery",
+        "list-downloads",
+      );
+      if (result.success) {
+        setDownloadRecords(result.records || []);
+      }
+    } catch {
+      // silent
+    } finally {
+      setDownloadsLoading(false);
+    }
+  }
+
   async function handleDownload(image: BingImage | FavoriteImage) {
     if (!window.cham) return;
 
@@ -215,11 +237,20 @@ function BingGallery() {
         {
           imageUrl:
             "fullUrl" in image ? (image as BingImage).fullUrl : image.url,
+          fullUrl:
+            "fullUrl" in image ? (image as BingImage).fullUrl : image.url,
+          copyright: image.copyright || "",
+          title: image.title || "",
+          hash: "hash" in image ? (image as BingImage).hash : "",
           fileName,
         },
       );
       if (result.success) {
         showToast(t.downloaded);
+        // Refresh download records if on downloads tab
+        if (activeTab === "downloads") {
+          loadDownloadRecords();
+        }
       }
     } catch {
       try {
@@ -238,6 +269,20 @@ function BingGallery() {
     }
   }
 
+  async function handleSetBackgroundFromPath(filePath: string) {
+    if (!window.cham) return;
+    try {
+      const result = await (window.cham as any).backgroundSet(filePath);
+      if (result?.success) {
+        showToast(t.backgroundSet);
+      } else {
+        showToast(t.errorLoading);
+      }
+    } catch {
+      showToast(t.errorLoading);
+    }
+  }
+
   async function handleSetBackground(image: BingImage | FavoriteImage) {
     if (!window.cham || settingBgRef.current) return;
     const imgUrl =
@@ -245,7 +290,7 @@ function BingGallery() {
 
     settingBgRef.current = true;
     try {
-      const result = await (window.cham as any).backgroundSetFromUrl(imgUrl);
+      const result = await (window.cham as any).backgroundSet(imgUrl);
       if (result?.success) {
         showToast(t.backgroundSet);
       } else {
@@ -292,6 +337,18 @@ function BingGallery() {
     }
   }
 
+  async function handleDeleteRecord(record: DownloadRecord) {
+    if (!window.cham) return;
+    try {
+      await window.cham.plugin.call("bing-gallery", "delete-download", {
+        id: record.id,
+      });
+      loadDownloadRecords();
+    } catch {
+      // silent
+    }
+  }
+
   function isFavorite(img: BingImage | FavoriteImage): boolean {
     return favoriteUrls.has(img.url);
   }
@@ -310,15 +367,15 @@ function BingGallery() {
       {error && <div className="bing-error">{error}</div>}
 
       {/* Loading */}
-      {loading && displayItems.length === 0 && <Spinner message={t.loading} />}
+      {activeTab !== "downloads" && loading && displayItems.length === 0 && <Spinner message={t.loading} />}
 
       {/* Empty */}
-      {!loading && !error && displayItems.length === 0 && (
+      {activeTab !== "downloads" && !loading && !error && displayItems.length === 0 && (
         <EmptyState message={t.noImages} />
       )}
 
       {/* Image Grid */}
-      {displayItems.length > 0 && (
+      {activeTab !== "downloads" && displayItems.length > 0 && (
         <div className="bing-grid-box">
           <div className="bing-grid">
             {displayItems.map((img) => (
@@ -338,9 +395,22 @@ function BingGallery() {
       )}
 
       {/* Bottom loading indicator */}
-      {loading && displayItems.length > 0 && (
+      {activeTab !== "downloads" && loading && displayItems.length > 0 && (
         <div className="bing-loading-more">
           <div className="bing-spinner-sm" />
+        </div>
+      )}
+
+      {/* Download Records */}
+      {activeTab === "downloads" && (
+        <div className="bing-grid-box">
+          <DownloadRecords
+            records={downloadRecords}
+            loading={downloadsLoading}
+            t={t}
+            onDelete={handleDeleteRecord}
+            onViewImage={setViewerImage}
+          />
         </div>
       )}
 
@@ -350,6 +420,7 @@ function BingGallery() {
         onClose={() => setViewerImage(null)}
         onDownload={handleDownload}
         onSetBackground={handleSetBackground}
+        onSetBackgroundFromPath={handleSetBackgroundFromPath}
         t={t}
       />
 

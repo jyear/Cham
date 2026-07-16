@@ -1,0 +1,152 @@
+/* ── Download Records List ── */
+
+.bing-downloads-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 48px;
+}
+
+.bing-downloads-empty {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 48px;
+  color: var(--text-secondary, #888);
+  font-size: 14px;
+}
+
+.bing-downloads-list {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+}
+
+/* ── Header ── */
+
+.bing-downloads-header {
+  display: flex;
+  align-items: center;
+  padding: 10px 20px;
+  background: var(--bg-secondary, #1a1a24);
+  border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.06));
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary, #888);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+/* ── Row ── */
+
+.bing-downloads-row {
+  display: flex;
+  align-items: center;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.04));
+  font-size: 13px;
+  color: var(--text-primary, #e0e0e0);
+  transition: background 0.15s;
+}
+
+.bing-downloads-row:hover {
+  background: var(--bg-secondary, #1a1a24);
+}
+
+/* ── Columns ── */
+
+.bing-downloads-col-thumb {
+  flex: 0 0 48px;
+  margin-right: 12px;
+  display: flex;
+  align-items: center;
+}
+
+.bing-downloads-col-thumb-clickable {
+  cursor: pointer;
+}
+
+.bing-downloads-thumb {
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  object-fit: cover;
+  display: block;
+  background: var(--bg-secondary, #1a1a24);
+}
+
+.bing-downloads-thumb-placeholder {
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  background: var(--bg-secondary, #1a1a24);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary, #555);
+}
+
+.bing-downloads-col-name {
+  flex: 2;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-right: 12px;
+}
+
+.bing-downloads-col-path {
+  flex: 3;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-right: 12px;
+  color: var(--text-secondary, #888);
+  font-size: 12px;
+}
+
+.bing-downloads-col-time {
+  flex: 1.5;
+  min-width: 0;
+  white-space: nowrap;
+  padding-right: 12px;
+  color: var(--text-secondary, #888);
+  font-size: 12px;
+}
+
+.bing-downloads-col-actions {
+  flex: 0 0 72px;
+  display: flex;
+  gap: 4px;
+  justify-content: flex-end;
+}
+
+/* ── Action Buttons ── */
+
+.bing-btn-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary, #888);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.bing-btn-icon:hover {
+  background: rgba(255, 255, 255, 0.16);
+  color: var(--accent, #15aabf);
+}
+
+.bing-btn-icon-delete:hover {
+  background: rgba(255, 68, 68, 0.2);
+  color: #ff6868;
+}

@@ -65,7 +65,6 @@ export function registerFileOpsHandlers(getMainWindow: () => BrowserWindow | nul
   // Read image file and return base64 data URL for thumbnail display
   ipcMain.handle('read-image', async (_event, filePath: string) => {
     try {
-      // Restrict to safe paths (same as delete-file)
       const safeRoots = [app.getPath('userData'), app.getPath('temp')];
       if (!isSafePath(filePath, safeRoots)) {
         return { success: false, error: 'Path not allowed' };

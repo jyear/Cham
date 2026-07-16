@@ -26,6 +26,13 @@ const en: Record<string, string> = {
   save: 'Save',
   saved: 'Settings saved',
   downloadPathRequired: 'Please set a download save path first',
+  downloads: 'Downloads',
+  downloadRecords: 'Download Records',
+  noDownloads: 'No download records',
+  openFolder: 'Open Folder',
+  downloadedAt: 'Downloaded',
+  localPath: 'Save Location',
+  deleteRecord: 'Delete Record',
 };
 
 export default en;
