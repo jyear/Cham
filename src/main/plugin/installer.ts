@@ -93,37 +93,56 @@ export async function fetchManifest(manifestUrl: string): Promise<PluginManifest
 /**
  * Install a plugin from a remote manifest URL.
  * Steps: fetch manifest → download bundle JS → save to disk → create tables → register in DB
+ *
+ * @param onProgress  Called with 0–100 as files are downloaded. Useful for UI progress bars.
  */
-export async function installPlugin(manifestUrl: string): Promise<PluginManifest> {
+export async function installPlugin(
+  manifestUrl: string,
+  onProgress?: (pct: number, pluginId: string) => void,
+): Promise<PluginManifest> {
   const manifest = await fetchManifest(manifestUrl);
   const pluginDir = getPluginDir(manifest.id);
 
   // Resolve bundle URLs relative to the manifest URL (handles query params correctly)
   const baseUrl = manifestUrl.replace(/\/[^\/]*$/, '/');
 
-  try {
-    const bundleUrl = new URL(manifest.entry, baseUrl).href;
-    const destPath = path.join(pluginDir, manifest.entry);
-    await downloadFile(bundleUrl, destPath);
+  // Build the list of files to download
+  const downloads: Array<{ url: string; dest: string }> = [];
 
-    if (manifest.main) {
-      const mainUrl = new URL(manifest.main, baseUrl).href;
-      await downloadFile(mainUrl, path.join(pluginDir, manifest.main));
-    }
+  const bundleUrl = new URL(manifest.entry, baseUrl).href;
+  downloads.push({ url: bundleUrl, dest: path.join(pluginDir, manifest.entry) });
 
-    // Download additional files (i18n, binaries, assets, etc.)
-    if (manifest.files) {
-      for (const file of manifest.files) {
-        const fileUrl = new URL(file, baseUrl).href;
-        const fileDest = path.join(pluginDir, file);
-        // Ensure parent directory exists
-        const fileDir = path.dirname(fileDest);
-        if (!fs.existsSync(fileDir)) {
-          fs.mkdirSync(fileDir, { recursive: true });
-        }
-        await downloadFile(fileUrl, fileDest);
+  if (manifest.main) {
+    const mainUrl = new URL(manifest.main, baseUrl).href;
+    downloads.push({ url: mainUrl, dest: path.join(pluginDir, manifest.main) });
+  }
+
+  if (manifest.files) {
+    for (const file of manifest.files) {
+      const fileUrl = new URL(file, baseUrl).href;
+      const fileDest = path.join(pluginDir, file);
+      const fileDir = path.dirname(fileDest);
+      if (!fs.existsSync(fileDir)) {
+        fs.mkdirSync(fileDir, { recursive: true });
       }
+      downloads.push({ url: fileUrl, dest: fileDest });
     }
+  }
+
+  try {
+    const total = downloads.length;
+    for (let i = 0; i < total; i++) {
+      const { url, dest } = downloads[i];
+      await downloadFile(url, dest, (filePct) => {
+        // Aggregate progress: each file contributes 100/total percent
+        if (onProgress) {
+          const aggregate = Math.round((i * 100 + filePct) / total);
+          onProgress(aggregate, manifest.id);
+        }
+      });
+    }
+    // Ensure 100% is reported
+    if (onProgress) onProgress(100, manifest.id);
 
     // Create tables and register in DB — only after all downloads succeed
     if (manifest.dbTables && manifest.dbTables.length > 0) {

@@ -166,7 +166,7 @@ export default function(api: any) {
 
   // 注册 hook——跟随 Cham 的缓存清理
   api.registerHook('cache:clear', async () => {
-    api.fs.remove('output');
+    api.native.fs.remove('output');
   });
 
   // 使用 KV 存储（通过 api.db 操作 plugin_store 表）
@@ -376,7 +376,7 @@ export default function(api: any) {
 | `api.emitHook(name, ...args)` | 触发钩子 |
 | `api.sharp` | sharp 图片处理（同宿主实例） |
 | `api.db.prepare(sql)` / `api.db.exec(sql)` | 数据库操作 |
-| `api.fs.readFile/writeFile/exists/mkdir/listDir/remove` | 沙箱文件系统 |
+| `api.native.fs.readFile/writeFile/exists/mkdir/listDir/remove` | 文件系统（绝对路径） |
 | `api.native.crypto.randomBytes/sha256/md5` | 加密哈希 |
 | `api.native.os.platform/arch/cpus/memory` | 系统信息 |
 | `api.native.path.join/resolve/basename/extname/dirname` | 路径操作 |

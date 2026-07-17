@@ -306,7 +306,7 @@ const { active } = await window.cham.plugin.isActive('watermark-tool');
 module.exports = function(api) {
   // 注册 IPC handler
   api.registerHandler('doWork', async (event, params) => {
-    // 使用 api.sharp, api.db, api.fs ...
+    // 使用 api.sharp, api.db, api.native.fs ...
     return { success: true };
   });
 
@@ -396,16 +396,16 @@ api.db.exec('CREATE TABLE IF NOT EXISTS plugin_mydata (id INTEGER PRIMARY KEY, v
 
 ### 文件系统
 
-所有路径相对于插件安装目录，绝对路径和 `..` 向上穿越被拒绝：
+所有路径必须是绝对路径，无沙箱限制（插件可按需读写任意位置）：
 
 ```javascript
-api.fs.readFile('config.json');       // → string
-api.fs.writeFile('config.json', '{}');
-api.fs.readBuffer('logo.png');        // → Buffer
-api.fs.exists('output');              // → boolean
-api.fs.mkdir('output/temp');
-api.fs.listDir('output');             // → string[] (文件/目录名)
-api.fs.remove('temp');                // 递归删除
+api.native.fs.readFile('/absolute/path/config.json');       // → string
+api.native.fs.writeFile('/absolute/path/config.json', '{}');
+api.native.fs.readBuffer('/absolute/path/logo.png');        // → Buffer
+api.native.fs.exists('/absolute/path/output');              // → boolean
+api.native.fs.mkdir('/absolute/path/output/temp');
+api.native.fs.listDir('/absolute/path/output');             // → string[] (文件/目录名)
+api.native.fs.remove('/absolute/path/temp');                // 递归删除
 ```
 
 ### Node.js 原生 API (`api.native`)
@@ -482,7 +482,7 @@ module.exports = function(api) {
   // timing: 'startup' (默认) — 仅在 app 启动完毕后触发，刚安装的插件不影响
   // timing: 'install' — 安装后立即生效，无需重启
   api.registerHook('cache:clear', async () => {
-    api.fs.remove('thumbnails');         // 清空本地缓存
+    api.native.fs.remove('thumbnails');         // 清空本地缓存
     api.db.exec('DELETE FROM plugin_mydata'); // 清空数据库缓存
     api.log.info('My cache cleared');
   }, 'startup');
@@ -581,7 +581,7 @@ module.exports = [
 
 | 策略 | 场景 | 做法 |
 |------|------|------|
-| **A. 使用 Cham 注入的 API** | 90% 场景 | `api.sharp`、`api.db`、`api.fs` 已覆盖图片处理、存储、文件 I/O |
+| **A. 使用 Cham 注入的 API** | 90% 场景 | `api.sharp`、`api.db`、`api.native.fs` 已覆盖图片处理、存储、文件 I/O |
 | **B. 打包纯 JS 库** | `lodash`、`dayjs`、`pdf-lib` 等 | webpack `target: 'node'` 自动打进 `main.js` |
 | **C. 预编译 `.node` 文件** | 需要额外原生模块 | 按平台预编译，Cham 验证 ABI 后加载（未来支持） |
 
@@ -610,7 +610,7 @@ module.exports = function(api) {
 | **渲染进程沙箱** | `contextIsolation: true` + `nodeIntegration: false` — 插件代码无法直接访问 Node.js API |
 | **插件 bundle 执行** | `new Function()` 执行在渲染进程全局作用域，由 Electron `contextIsolation: true` + `nodeIntegration: false` 提供沙箱隔离 |
 | **主进程模块加载** | `vm.compileFunction()` 替代 `require()` — `require`/`process`/`fs` 不在作用域中 |
-| **文件系统** | `api.fs` 限制在插件安装目录内，`delete-file`/`delete-dir` IPC 限制在 `userData`+`temp` 内 |
+| **文件系统** | `api.native.fs` 接受绝对路径，无沙箱限制；`delete-file`/`delete-dir` IPC 限制在 `userData`+`temp` 内 |
 | **数据库** | SQL 黑名单拦截 ATTACH/DROP/ALTER/PRAGMA 等，表名强制 `plugin_` 前缀 |
 | **IPC** | 插件自定义 handler 自动前缀 `plugin:<id>:` 防冲突；dangerous IPC handler 加路径白名单 |
 | **窗口隔离** | React Error Boundary 单窗口崩溃不影响其他；`useScopedWindowActions` 阻止跨窗口操作 |

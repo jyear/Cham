@@ -21,7 +21,7 @@ import { pluginHost } from '../plugin/host';
 /**
  * Register all plugin-related IPC handlers.
  */
-export function registerPluginHandlers(_getMainWindow: () => BrowserWindow | null): void {
+export function registerPluginHandlers(getMainWindow: () => BrowserWindow | null): void {
   // ── Lifecycle ──
 
   ipcMain.handle('plugin:listInstalled', async () => {
@@ -38,7 +38,13 @@ export function registerPluginHandlers(_getMainWindow: () => BrowserWindow | nul
 
   ipcMain.handle('plugin:install', async (_event, manifestUrl: string) => {
     try {
-      const manifest = await installPlugin(manifestUrl);
+      const manifest = await installPlugin(manifestUrl, (pct: number, pluginId: string) => {
+        getMainWindow()?.webContents.send('plugin-install-progress', {
+          pluginId,
+          progress: pct,
+          manifestUrl,
+        });
+      });
       return { success: true, manifest };
     } catch (error: any) {
       return { success: false, error: error.message };

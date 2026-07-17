@@ -271,7 +271,7 @@ Plugin Bundle (zip)
 │ │  api.registerHandler('doWork', handler);    │ │
 │ │  api.sharp(input).webp().toFile();         │ │
 │ │  api.db.prepare('SELECT * FROM ...');      │ │
-│ │  api.fs.readFile('config.json');           │ │
+│ │  api.native.fs.readFile('/absolute/path/conf.json'); │ │
 │ └────────────────────────────────────────────┘ │
 │              │                                  │
 │   IPC: plugin:<id>:<channel>                   │
@@ -346,8 +346,8 @@ module.exports = function(api) {
       'INSERT INTO plugin_watermark_presets (name, position, opacity) VALUES (?, ?, ?)'
     ).run(params.presetName, position, opacity);
 
-    // Write logs to plugin directory (sandboxed fs)
-    api.fs.writeFile('last-run.json', JSON.stringify({
+    // Write result to output file (absolute path)
+    api.native.fs.writeFile(outputPath, JSON.stringify({
       input: inputPath,
       output: result,
       timestamp: new Date().toISOString(),
@@ -370,8 +370,8 @@ module.exports = function(api) {
   return () => {
     api.log.info('Plugin deactivated, temporary files cleaned');
     // Remove temp files
-    if (api.fs.exists('temp')) {
-      api.fs.remove('temp');
+    if (api.native.fs.exists(api.native.path.join(api.pluginDir, 'temp'))) {
+      api.native.fs.remove(api.native.path.join(api.pluginDir, 'temp'));
     }
   };
 };
@@ -430,17 +430,17 @@ var __chamPlugin = (function() {
 | `api.sharp` | Access to sharp for image processing (same instance as host app) |
 | `api.db.prepare(sql).run/get/all(params)` | Execute SQL on plugin-declared tables and `plugin_store` |
 | `api.db.exec(sql)` | Execute raw SQL (CREATE TABLE restricted to declared tables) |
-| `api.fs.readFile(path)` | Read a text file from the plugin directory |
-| `api.fs.writeFile(path, data)` | Write a text file to the plugin directory |
-| `api.fs.readBuffer(path)` | Read a binary file from the plugin directory |
-| `api.fs.exists(path)` | Check if a file exists |
-| `api.fs.mkdir(path)` | Create a directory |
-| `api.fs.listDir(path)` | List files in a directory |
-| `api.fs.remove(path)` | Delete a file or directory |
+| `api.native.fs.readFile(path)` | Read a text file from an absolute path |
+| `api.native.fs.writeFile(path, data)` | Write a text file to an absolute path |
+| `api.native.fs.readBuffer(path)` | Read a binary file from an absolute path |
+| `api.native.fs.exists(path)` | Check if a file exists at an absolute path |
+| `api.native.fs.mkdir(path)` | Create a directory at an absolute path |
+| `api.native.fs.listDir(path)` | List files in a directory at an absolute path |
+| `api.native.fs.remove(path)` | Delete a file or directory at an absolute path |
 | `api.log.info/warn/error(msg)` | Logger with plugin ID prefix |
 
 **Rules:**
-- All `api.fs` paths are relative to the plugin directory. Absolute paths and `..` traversal are rejected.
+- All `api.native.fs` paths must be absolute. Relative paths will throw an error.
 - `api.db` table access is validated — only tables declared in `manifest.dbTables` + `plugin_store` are allowed.
 - `api.registerHandler` channels are automatically prefixed with `plugin:<pluginId>:` to prevent collisions.
 
@@ -481,7 +481,7 @@ Three strategies, in order of preference:
 
 | Strategy | When to Use | How |
 |----------|------------|-----|
-| **A. Use Cham's injected API** | 90% of cases | `api.sharp`, `api.db`, `api.fs` cover image processing, storage, file I/O |
+| **A. Use Cham's injected API** | 90% of cases | `api.sharp`, `api.db`, `api.native.fs` cover image processing, storage, file I/O |
 | **B. Bundle pure-JS packages** | For utilities like `lodash`, `dayjs`, `pdf-lib` | `target: 'node'` webpack bundles them into `main.js` automatically |
 | **C. Pre-compiled native `.node` files** | Rare, requires review | Ship platform-specific `.node` binaries; Cham validates ABI on install (future) |
 
@@ -575,7 +575,7 @@ The in-app Store (accessible via the dock or `/store` route) has two tabs:
 - Store plugins run in the Electron renderer sandbox (**`contextIsolation: true`**, **`nodeIntegration: false`**)
 - Renderer plugins cannot access Node.js APIs (`fs`, `child_process`, etc.) directly
 - Main process plugins receive an **injected API** — not raw `require()` access to Node.js
-- `api.fs` is sandboxed to the plugin directory; traversal is blocked
+- `api.native.fs` requires absolute paths; relative paths throw an error
 - `api.db` validates table access per the plugin's declared `dbTables`
 - `api.registerHandler` channels are namespaced to prevent collisions
 - Plugin database tables are declared in the manifest — no raw CREATE TABLE from plugin code

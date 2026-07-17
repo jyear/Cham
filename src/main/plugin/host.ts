@@ -408,43 +408,6 @@ class PluginHost {
         },
       },
 
-      // ── File system (sandboxed to plugin dir) ──
-      fs: {
-        readFile(relativePath: string): string {
-          const resolved = PluginHost.resolveSafe(pluginDir, relativePath);
-          return fs.readFileSync(resolved, 'utf-8');
-        },
-        writeFile(relativePath: string, data: string): void {
-          const resolved = PluginHost.resolveSafe(pluginDir, relativePath);
-          const dir = path.dirname(resolved);
-          if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-          fs.writeFileSync(resolved, data, 'utf-8');
-        },
-        readBuffer(relativePath: string): Buffer {
-          const resolved = PluginHost.resolveSafe(pluginDir, relativePath);
-          return fs.readFileSync(resolved);
-        },
-        exists(relativePath: string): boolean {
-          const resolved = PluginHost.resolveSafe(pluginDir, relativePath);
-          return fs.existsSync(resolved);
-        },
-        mkdir(relativePath: string): void {
-          const resolved = PluginHost.resolveSafe(pluginDir, relativePath);
-          fs.mkdirSync(resolved, { recursive: true });
-        },
-        listDir(relativePath: string): string[] {
-          const resolved = PluginHost.resolveSafe(pluginDir, relativePath);
-          if (!fs.existsSync(resolved)) return [];
-          return fs.readdirSync(resolved);
-        },
-        remove(relativePath: string): void {
-          const resolved = PluginHost.resolveSafe(pluginDir, relativePath);
-          if (fs.existsSync(resolved)) {
-            fs.rmSync(resolved, { recursive: true, force: true });
-          }
-        },
-      },
-
       // ── Hooks (pub/sub across plugins) ──
       registerHook: (
         hookName: string,
@@ -520,6 +483,41 @@ class PluginHost {
         shell: {
           showItemInFolder: (filePath: string): void => {
             shell.showItemInFolder(filePath);
+          },
+        },
+        fs: {
+          readFile(absolutePath: string): string {
+            if (!path.isAbsolute(absolutePath)) throw new Error('Absolute path required');
+            return fs.readFileSync(absolutePath, 'utf-8');
+          },
+          writeFile(absolutePath: string, data: string): void {
+            if (!path.isAbsolute(absolutePath)) throw new Error('Absolute path required');
+            const dir = path.dirname(absolutePath);
+            if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+            fs.writeFileSync(absolutePath, data, 'utf-8');
+          },
+          readBuffer(absolutePath: string): Buffer {
+            if (!path.isAbsolute(absolutePath)) throw new Error('Absolute path required');
+            return fs.readFileSync(absolutePath);
+          },
+          exists(absolutePath: string): boolean {
+            if (!path.isAbsolute(absolutePath)) throw new Error('Absolute path required');
+            return fs.existsSync(absolutePath);
+          },
+          mkdir(absolutePath: string): void {
+            if (!path.isAbsolute(absolutePath)) throw new Error('Absolute path required');
+            fs.mkdirSync(absolutePath, { recursive: true });
+          },
+          listDir(absolutePath: string): string[] {
+            if (!path.isAbsolute(absolutePath)) throw new Error('Absolute path required');
+            if (!fs.existsSync(absolutePath)) return [];
+            return fs.readdirSync(absolutePath);
+          },
+          remove(absolutePath: string): void {
+            if (!path.isAbsolute(absolutePath)) throw new Error('Absolute path required');
+            if (fs.existsSync(absolutePath)) {
+              fs.rmSync(absolutePath, { recursive: true, force: true });
+            }
           },
         },
         readImage: (absolutePath: string): string => {

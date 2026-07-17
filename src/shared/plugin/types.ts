@@ -150,20 +150,6 @@ export interface PluginMainApi {
     exec(sql: string): void;
   };
 
-  /**
-   * File system — sandboxed to the plugin's install directory.
-   * All paths are resolved relative to the plugin dir.
-   * Absolute paths and '..' traversal are rejected.
-   */
-  fs: {
-    readFile(relativePath: string): string;
-    writeFile(relativePath: string, data: string): void;
-    readBuffer(relativePath: string): Buffer;
-    exists(relativePath: string): boolean;
-    mkdir(relativePath: string): void;
-    listDir(relativePath: string): string[];
-    remove(relativePath: string): void;
-  };
 
   /**
    * Send a push event to the renderer process.
@@ -240,6 +226,19 @@ export interface PluginMainApi {
       showItemInFolder(filePath: string): void;
     };
     /**
+     * File system — full read/write access with absolute paths.
+     * Plugins can read from and write to any location on disk.
+     */
+    fs: {
+      readFile(absolutePath: string): string;
+      writeFile(absolutePath: string, data: string): void;
+      readBuffer(absolutePath: string): Buffer;
+      exists(absolutePath: string): boolean;
+      mkdir(absolutePath: string): void;
+      listDir(absolutePath: string): string[];
+      remove(absolutePath: string): void;
+    };
+    /**
      * Read an image file from an absolute path and return a base64 data URL.
      * Supports jpg, png, webp, avif, gif, bmp, svg.
      */
@@ -302,6 +301,8 @@ export interface StoreIndexEntry {
   author?: string;
   homepage?: string;
   minAppVersion?: string;
+  /** ISO date string of the last update for this plugin */
+  updatedAt?: string;
   manifestUrl: string;
   downloadUrl: string;
 }

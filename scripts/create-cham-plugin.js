@@ -183,7 +183,7 @@ export default function(api: any) {
 
   // Register hook — clear cache when user clicks "Clear Cache" in Settings
   api.registerHook('cache:clear', async () => {
-    api.fs.remove('temp');
+    api.native.fs.remove('temp');
     api.log.info('Cache cleared');
   });
 

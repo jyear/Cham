@@ -120,6 +120,7 @@ export interface ChamAPI {
       error?: string;
     }>;
     subscribe: (pluginId: string, channel: string, cb: (...args: any[]) => void) => () => void;
+    onInstallProgress: (cb: (data: { pluginId: string; progress: number; manifestUrl: string }) => void) => () => void;
   };
 }
 
@@ -232,6 +233,11 @@ contextBridge.exposeInMainWorld('cham', {
       const handler = (_e: any, ...args: any[]) => cb(...args);
       ipcRenderer.on(fullChannel, handler);
       return () => ipcRenderer.removeListener(fullChannel, handler);
+    },
+    onInstallProgress: (cb: (data: { pluginId: string; progress: number; manifestUrl: string }) => void) => {
+      const handler = (_e: any, data: { pluginId: string; progress: number; manifestUrl: string }) => cb(data);
+      ipcRenderer.on('plugin-install-progress', handler);
+      return () => ipcRenderer.removeListener('plugin-install-progress', handler);
     },
   },
 } satisfies ChamAPI);

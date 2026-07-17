@@ -136,6 +136,11 @@ const zh = {
   storeBrowseHint: '切换到「发现」标签页浏览可用插件',
   storeNoStorePlugins: '暂无可用插件',
   storeRefresh: '刷新',
+  storeUpdate: '更新',
+  storeUpToDate: '所有应用已是最新版本',
+  storeInstalledLatest: '已安装',
+  storeLatestVersion: (v: string) => `最新版本: v${v}`,
+  storeUpdateDate: (d: string) => `更新日期: ${d}`,
   addLocalApp: '添加本地应用',
 
   // Misc

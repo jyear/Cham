@@ -1,30 +1,63 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useT } from '@/i18n';
 import Icon from '@/components/Icon';
 import { usePluginRegistry } from '@/plugins/PluginRegistryProvider';
-import { useWindows, type AppDefinition } from '@/contexts/WindowContext';
 import type { StoreIndex, StoreIndexEntry } from '@shared/plugin/types';
 import s from './index.module.css';
 
 const STORE_INDEX_URL = `${process.env.CHAM_STORE_URL || 'https://cham-download.oss-cn-beijing.aliyuncs.com/store'}/index.json`;
 
-type TabKey = 'installed' | 'discover';
-
 const isDev = process.env.FOR_DEVELOPMENT === 'true';
+
+/* ── Helpers ── */
+
+function compareVersions(a: string, b: string): number {
+  const pa = a.split('.').map(Number);
+  const pb = b.split('.').map(Number);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const va = pa[i] || 0;
+    const vb = pb[i] || 0;
+    if (va > vb) return 1;
+    if (va < vb) return -1;
+  }
+  return 0;
+}
+
+function formatDate(iso: string): string {
+  try {
+    const d = new Date(iso);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  } catch {
+    return iso;
+  }
+}
+
+type TabKey = 'discover' | 'updates';
 
 export default function Store() {
   const { t } = useT();
   const navigate = useNavigate();
-  const { openApp } = useWindows();
-  const { bundles, builtins, installed, loading, error, installPlugin, installLocalPlugin, uninstallPlugin } = usePluginRegistry();
-  const [tab, setTab] = useState<TabKey>('installed');
+  const { bundles, loading, error, installPlugin, installLocalPlugin } = usePluginRegistry();
   const [storeIndex, setStoreIndex] = useState<StoreIndex | null>(null);
   const [storeLoading, setStoreLoading] = useState(false);
   const [storeError, setStoreError] = useState<string | null>(null);
   const [installingIds, setInstallingIds] = useState<Set<string>>(new Set());
+  const [installProgress, setInstallProgress] = useState<Record<string, number>>({});
+  const [tab, setTab] = useState<TabKey>('discover');
 
-  // Fetch store index on mount
+  // Subscribe to install progress events
+  useEffect(() => {
+    if (!window.cham) return;
+    const unsub = window.cham.plugin.onInstallProgress((data) => {
+      setInstallProgress((prev) => ({ ...prev, [data.pluginId]: data.progress }));
+    });
+    return unsub;
+  }, []);
+
   useEffect(() => {
     setStoreLoading(true);
     setStoreError(null);
@@ -33,7 +66,6 @@ export default function Store() {
       .then((data) => setStoreIndex(data as StoreIndex))
       .catch((err) => {
         setStoreError(err.message || 'Failed to load store');
-        // Store may not exist yet (no published plugins) — that's fine
       })
       .finally(() => setStoreLoading(false));
   }, []);
@@ -42,6 +74,7 @@ export default function Store() {
 
   const handleInstall = useCallback(async (entry: StoreIndexEntry) => {
     setInstallingIds((prev) => new Set(prev).add(entry.id));
+    setInstallProgress((prev) => ({ ...prev, [entry.id]: 0 }));
     try {
       await installPlugin(entry.manifestUrl);
     } catch {
@@ -50,6 +83,11 @@ export default function Store() {
       setInstallingIds((prev) => {
         const next = new Set(prev);
         next.delete(entry.id);
+        return next;
+      });
+      setInstallProgress((prev) => {
+        const next = { ...prev };
+        delete next[entry.id];
         return next;
       });
     }
@@ -66,247 +104,200 @@ export default function Store() {
     }
   }, [installLocalPlugin]);
 
-  const handleUninstall = useCallback(async (pluginId: string) => {
-    try {
-      await uninstallPlugin(pluginId);
-    } catch {
-      // Error already shown
+  const installedVersionMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const b of bundles) {
+      map.set(b.manifest.id, b.manifest.version);
     }
-  }, [uninstallPlugin]);
+    return map;
+  }, [bundles]);
 
-  const handleOpenApp = useCallback(async (bundle: typeof bundles[number]) => {
-    // Store plugins always use the iframe Component from the registry.
-    // No need to reload from disk — PluginIframe handles everything.
-    const app: AppDefinition = {
-      key: bundle.manifest.id,
-      icon: bundle.manifest.icon as any,
-      color: bundle.manifest.color,
-      title: bundle.manifest.name,
-      description: bundle.manifest.description,
-      unresizable: bundle.manifest.unresizable,
-      minWidth: bundle.manifest.minWidth,
-      minHeight: bundle.manifest.minHeight,
-      Component: bundle.Component,
-    };
-    openApp(app);
-    navigate('/');
-  }, [openApp, navigate]);
+  const installedIds = useMemo(() => new Set(bundles.map((b) => b.manifest.id)), [bundles]);
 
-  const installedIds = new Set(bundles.map((b) => b.manifest.id));
+  const updateAvailable = useMemo(() => {
+    if (!storeIndex) return [];
+    return storeIndex.plugins.filter((entry) => {
+      const inst = installedVersionMap.get(entry.id);
+      if (!inst) return false;
+      return compareVersions(entry.version, inst) > 0;
+    });
+  }, [storeIndex, installedVersionMap]);
+
+  const displayedPlugins = useMemo(() => {
+    if (!storeIndex) return [];
+    if (tab === 'updates') return updateAvailable;
+    return storeIndex.plugins;
+  }, [storeIndex, tab, updateAvailable]);
 
   return (
-    <div className={s.container} onClick={handleBackdrop}>
-      <div className={s.panel} onClick={(e) => e.stopPropagation()}>
-        {/* Tabs */}
+    <div className={s.wrapper} onClick={handleBackdrop}>
+      {/* Top Tab Bar */}
+      <div className={s.tabBar} onClick={(e) => e.stopPropagation()}>
         <div className={s.tabs}>
-          <button
-            className={`${s.tab} ${tab === 'installed' ? s.tabActive : ''}`}
-            onClick={() => setTab('installed')}
-          >
-            {t.storeInstalled || 'Installed'}
-          </button>
           <button
             className={`${s.tab} ${tab === 'discover' ? s.tabActive : ''}`}
             onClick={() => setTab('discover')}
           >
             {t.storeDiscover || 'Discover'}
           </button>
-          {isDev && (
-            <button className={s.addLocalBtn} onClick={handleAddLocal}>
-              + {t.addLocalApp || 'Add Local App'}
-            </button>
-          )}
+          <button
+            className={`${s.tab} ${tab === 'updates' ? s.tabActive : ''}`}
+            onClick={() => setTab('updates')}
+          >
+            {t.storeUpdate || 'Updates'}
+            {updateAvailable.length > 0 && (
+              <span className={s.badge}>{updateAvailable.length}</span>
+            )}
+          </button>
         </div>
+        {isDev && (
+          <button className={s.addLocalBtn} onClick={handleAddLocal}>
+            + {t.addLocalApp || 'Add Local App'}
+          </button>
+        )}
+      </div>
 
-        {/* Error */}
-        {error && <div className={s.error}>{error}</div>}
+      {/* Content */}
+      <div className={s.content}>
+        {(error || storeError) && (
+          <div className={s.error}>{error || storeError}</div>
+        )}
 
-        {/* Content */}
-        <div className={s.content}>
-          {tab === 'installed' && (
-            <InstalledTab
-              bundles={bundles}
-              builtins={builtins}
-              installed={installed}
-              loading={loading}
-              onOpen={handleOpenApp}
-              onUninstall={handleUninstall}
-              installingIds={installingIds}
-              t={t}
-            />
-          )}
-          {tab === 'discover' && (
-            <DiscoverTab
-              storeIndex={storeIndex}
-              loading={storeLoading}
-              error={storeError}
-              installedIds={installedIds}
-              installingIds={installingIds}
-              onInstall={handleInstall}
-              t={t}
-            />
-          )}
-        </div>
+        {storeLoading || loading ? (
+          <div className={s.loading}>Loading...</div>
+        ) : tab === 'updates' && updateAvailable.length === 0 ? (
+          <div className={s.emptyState}>
+            <Icon type="check" size={40} />
+            <p className={s.emptyTitle}>{t.storeUpToDate || 'All apps are up to date'}</p>
+          </div>
+        ) : !storeIndex || storeIndex.plugins.length === 0 ? (
+          <div className={s.emptyState}>
+            <p className={s.emptyTitle}>{t.storeNoStorePlugins || 'No plugins available'}</p>
+            <p className={s.emptyHint}>{t.storeBrowseHint || 'Check back later for new plugins'}</p>
+          </div>
+        ) : (
+          <div className={s.cardGrid} onClick={(e) => e.stopPropagation()}>
+            {displayedPlugins.map((entry) => (
+              <AppCard
+                key={entry.id}
+                entry={entry}
+                isInstalled={installedIds.has(entry.id)}
+                installedVersion={installedVersionMap.get(entry.id)}
+                isInstalling={installingIds.has(entry.id)}
+                progress={installProgress[entry.id] ?? 0}
+                onInstall={handleInstall}
+                t={t}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-/* ─── Installed Tab ─── */
+/* ─── App Card ─── */
 
-function InstalledTab({
-  bundles, builtins, installed, loading, onOpen, onUninstall, installingIds, t,
+function AppCard({
+  entry, isInstalled, installedVersion, isInstalling, progress, onInstall, t,
 }: {
-  bundles: ReturnType<typeof usePluginRegistry>['bundles'];
-  builtins: ReturnType<typeof usePluginRegistry>['builtins'];
-  installed: ReturnType<typeof usePluginRegistry>['installed'];
-  loading: boolean;
-  onOpen: (b: typeof bundles[number]) => void;
-  onUninstall: (id: string) => void;
-  installingIds: Set<string>;
-  t: any;
-}) {
-  if (loading) {
-    return <div className={s.loading}>Loading...</div>;
-  }
-
-  if (bundles.length === 0) {
-    return (
-      <div className={s.empty}>
-        <div className={s.emptyTitle}>{t.storeNoPlugins || 'No plugins installed yet'}</div>
-        <div className={s.emptyHint}>{t.storeBrowseHint || 'Switch to the Discover tab to find plugins'}</div>
-      </div>
-    );
-  }
-
-  const builtinIds = new Set(builtins.map((b) => b.manifest.id));
-
-  return (
-    <>
-      {bundles.map((bundle) => {
-        const isBuiltin = builtinIds.has(bundle.manifest.id);
-        const isUninstalling = installingIds.has(bundle.manifest.id);
-
-        return (
-          <div key={bundle.manifest.id} className={s.card}>
-            <div className={s.cardIcon} style={{ background: bundle.manifest.color }}>
-              <Icon type={bundle.manifest.icon as any} size={22} color="#fff" />
-            </div>
-            <div className={s.cardInfo}>
-              <div className={s.cardName}>
-                {(t as any)[bundle.manifest.name] ?? bundle.manifest.name}
-              </div>
-              {bundle.manifest.description && (
-                <div className={s.cardDesc}>
-                  {(t as any)[bundle.manifest.description] ?? bundle.manifest.description}
-                </div>
-              )}
-              <div className={s.cardMeta}>
-                <span className={`${s.cardBadge} ${isBuiltin ? s.badgeBuiltin : s.badgeStore}`}>
-                  {isBuiltin ? (t.storeBuiltinBadge || 'Built-in') : (t.storeStoreBadge || 'Store')}
-                </span>
-                {(t.storeVersion as any)?.(bundle.manifest.version) ?? `v${bundle.manifest.version}`}
-              </div>
-            </div>
-            <div className={s.cardActions}>
-              <button className={`${s.btn} ${s.btnPrimary}`} onClick={() => onOpen(bundle)}>
-                Open
-              </button>
-              {!isBuiltin && (
-                <button
-                  className={`${s.btn} ${s.btnDanger}`}
-                  onClick={() => onUninstall(bundle.manifest.id)}
-                  disabled={isUninstalling}
-                >
-                  {isUninstalling ? (t.storeUpdating || '...') : (t.storeUninstall || 'Uninstall')}
-                </button>
-              )}
-            </div>
-          </div>
-        );
-      })}
-    </>
-  );
-}
-
-/* ─── Discover Tab ─── */
-
-function DiscoverTab({
-  storeIndex, loading, error, installedIds, installingIds, onInstall, t,
-}: {
-  storeIndex: StoreIndex | null;
-  loading: boolean;
-  error: string | null;
-  installedIds: Set<string>;
-  installingIds: Set<string>;
+  entry: StoreIndexEntry;
+  isInstalled: boolean;
+  installedVersion: string | undefined;
+  isInstalling: boolean;
+  progress: number;
   onInstall: (entry: StoreIndexEntry) => void;
   t: any;
 }) {
-  if (loading) {
-    return <div className={s.loading}>Loading...</div>;
+  let buttonState: 'install' | 'installed' | 'update' = 'install';
+  if (isInstalled && installedVersion) {
+    if (compareVersions(entry.version, installedVersion) > 0) {
+      buttonState = 'update';
+    } else {
+      buttonState = 'installed';
+    }
   }
 
-  if (error) {
-    return (
-      <div className={s.empty}>
-        <div className={s.emptyTitle}>{t.storeNoStorePlugins || 'No plugins available'}</div>
-        <div className={s.emptyHint}>{error}</div>
-      </div>
-    );
-  }
+  const displayDesc = (t as any)[entry.description] ?? entry.description;
 
-  if (!storeIndex || storeIndex.plugins.length === 0) {
-    return (
-      <div className={s.empty}>
-        <div className={s.emptyTitle}>{t.storeNoStorePlugins || 'No plugins available'}</div>
-        <div className={s.emptyHint}>{t.storeBrowseHint || 'Check back later for new plugins'}</div>
-      </div>
-    );
-  }
+  // Circular progress ring geometry
+  const ringSize = 28;
+  const ringCenter = ringSize / 2;
+  const ringRadius = 10;
+  const ringCircumference = 2 * Math.PI * ringRadius;
+  const ringOffset = ringCircumference * (1 - progress / 100);
 
   return (
-    <>
-      {storeIndex.plugins.map((entry) => {
-        const isInstalled = installedIds.has(entry.id);
-        const isInstalling = installingIds.has(entry.id);
+    <div className={s.card}>
+      {/* Top-right: progress ring (installing) or small action button */}
+      <div className={s.topRight}>
+        {isInstalling ? (
+          <svg width={ringSize} height={ringSize} viewBox={`0 0 ${ringSize} ${ringSize}`}>
+            <circle
+              className={s.ringTrack}
+              cx={ringCenter} cy={ringCenter} r={ringRadius}
+              fill="none"
+              strokeWidth="2"
+            />
+            <circle
+              className={s.ringFill}
+              cx={ringCenter} cy={ringCenter} r={ringRadius}
+              fill="none"
+              strokeWidth="2"
+              strokeDasharray={ringCircumference}
+              strokeDashoffset={ringOffset}
+              strokeLinecap="round"
+              transform={`rotate(-90 ${ringCenter} ${ringCenter})`}
+            />
+          </svg>
+        ) : buttonState === 'installed' ? (
+          <span className={s.badgeInstalled}>
+            {t.storeInstalledLatest || 'Installed'}
+          </span>
+        ) : buttonState === 'update' ? (
+          <button
+            className={s.btnMiniUpdate}
+            onClick={() => onInstall(entry)}
+          >
+            {t.storeUpdate || 'Update'}
+          </button>
+        ) : (
+          <button
+            className={s.btnMiniGet}
+            onClick={() => onInstall(entry)}
+          >
+            {t.storeInstall || 'Install'}
+          </button>
+        )}
+      </div>
 
-        return (
-          <div key={entry.id} className={s.card}>
-            <div className={s.cardIcon} style={{ background: entry.color }}>
-              <Icon type={entry.icon as any} size={22} color="#fff" />
-            </div>
-            <div className={s.cardInfo}>
-              <div className={s.cardName}>
-                {(t as any)[entry.name] ?? entry.name}
-              </div>
-              <div className={s.cardDesc}>
-                {(t as any)[entry.description] ?? entry.description}
-              </div>
-              <div className={s.cardMeta}>
-                {(t.storeVersion as any)?.(entry.version) ?? `v${entry.version}`}
-                {entry.author && (
-                  <> · {(t.storeAuthor as any)?.(entry.author) ?? `By ${entry.author}`}</>
-                )}
-              </div>
-            </div>
-            <div className={s.cardActions}>
-              {isInstalled ? (
-                <span className={s.cardBadge + ' ' + s.badgeBuiltin}>Installed</span>
-              ) : (
-                <button
-                  className={`${s.btn} ${s.btnPrimary}`}
-                  onClick={() => onInstall(entry)}
-                  disabled={isInstalling}
-                >
-                  {isInstalling
-                    ? (t.storeInstalling || 'Installing...')
-                    : (t.storeInstall || 'Install')}
-                </button>
-              )}
-            </div>
+      {/* Icon */}
+      <div className={s.cardIconCol}>
+        <div className={s.cardIconWrap} style={{ background: entry.color }}>
+          <Icon type={entry.icon as any} size={36} color="#fff" />
+        </div>
+      </div>
+
+      {/* Info */}
+      <div className={s.cardBody}>
+        <div className={s.cardName}>
+          {(t as any)[entry.name] ?? entry.name}
+        </div>
+        {displayDesc && (
+          <div className={s.cardDesc} title={displayDesc}>
+            {displayDesc}
           </div>
-        );
-      })}
-    </>
+        )}
+        <div className={s.cardMeta}>
+          {entry.author && (
+            <span>{entry.author}</span>
+          )}
+          <span>v{entry.version}</span>
+          {entry.updatedAt && (
+            <span>{formatDate(entry.updatedAt)}</span>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

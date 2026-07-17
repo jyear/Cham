@@ -108,6 +108,7 @@ declare global {
         error?: string;
       }>;
       subscribe: (pluginId: string, channel: string, cb: (...args: any[]) => void) => () => void;
+      onInstallProgress: (cb: (data: { pluginId: string; progress: number; manifestUrl: string }) => void) => () => void;
     };
   }
 

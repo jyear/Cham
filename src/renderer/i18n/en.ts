@@ -136,6 +136,11 @@ const en = {
   storeBrowseHint: 'Switch to the Discover tab to find plugins',
   storeNoStorePlugins: 'No plugins available',
   storeRefresh: 'Refresh',
+  storeUpdate: 'Update',
+  storeUpToDate: 'All apps are up to date',
+  storeInstalledLatest: 'Installed',
+  storeLatestVersion: (v: string) => `Latest: v${v}`,
+  storeUpdateDate: (d: string) => `Updated: ${d}`,
   addLocalApp: 'Add Local App',
 
   // Misc
