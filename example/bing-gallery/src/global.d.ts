@@ -1,6 +1,9 @@
 /** Type declarations for Cham plugin runtime */
 
 interface ChamPluginApi {
+  // 1-2 args: auto-prefix current plugin id → call(channel) | call(channel, params)
+  // 3+ args: explicit target → call(targetPluginId, channel, ...params)
+  call(channel: string, ...args: any[]): Promise<any>;
   call(pluginId: string, channel: string, ...args: any[]): Promise<any>;
   subscribe(pluginId: string, channel: string, callback: (data: any) => void): () => void;
   getItem(pluginId: string, key: string): Promise<{ value: string }>;

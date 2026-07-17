@@ -25,7 +25,7 @@ function RecordThumb({ filePath }: { filePath: string }) {
       return;
     }
 
-    window.cham.plugin.call("bing-gallery", "read-local-image", { filePath })
+    window.cham.plugin.call( "read-local-image", { filePath })
       .then((result) => {
         if (cancelled) return;
         if (result && result.success && result.dataUrl) {
@@ -70,7 +70,7 @@ export function DownloadRecords({ records, loading, t, onDelete, onViewImage }: 
 
   function handleOpenFolder(localPath: string) {
     if (!window.cham) return;
-    window.cham.plugin.call("bing-gallery", "open-folder", { filePath: localPath });
+    window.cham.plugin.call( "open-folder", { filePath: localPath });
   }
 
   function formatTime(dateStr: string): string {

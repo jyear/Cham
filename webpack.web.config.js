@@ -1,11 +1,10 @@
-require('./scripts/load-env')('.env.dev');
-
 const path = require('path');
 const webpack = require('webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 module.exports = (_env, argv) => {
   const isProd = argv.mode === 'production';
+  require('./scripts/load-env')(isProd ? '.env.prod' : '.env.dev');
 
   /** @type {import('webpack').Configuration & { devServer?: import('webpack-dev-server').Configuration }} */
   return {

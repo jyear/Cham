@@ -23,8 +23,8 @@ interface Props {
 
 type Status = 'loading' | 'loaded' | 'error';
 
-function buildSrcdoc(opts: { url?: string; bundle?: string; source?: string }): string {
-  const { url, bundle = 'renderer.dev.js', source } = opts;
+function buildSrcdoc(opts: { pluginId: string; url?: string; bundle?: string; source?: string }): string {
+  const { pluginId, url, bundle = 'renderer.dev.js', source } = opts;
 
   const bundleTag = url
     ? `<script src="${url.replace(/\/+$/, '')}/${bundle}"></script>`
@@ -43,6 +43,7 @@ function buildSrcdoc(opts: { url?: string; bundle?: string; source?: string }): 
 </head>
 <body>
 <div id="root"></div>
+<script>window.__CHAM_PLUGIN_ID__ = '${pluginId}';</script>
 <script>${BRIDGE_SOURCE}</script>
 ${bundleTag}
 </body>
@@ -55,8 +56,8 @@ export default function PluginIframe({ pluginId, url, bundle, source }: Props) {
   const [retryKey, setRetryKey] = useState(0);
 
   const srcdoc = useMemo(
-    () => buildSrcdoc({ url, bundle, source }),
-    [url, bundle, source],
+    () => buildSrcdoc({ pluginId, url, bundle, source }),
+    [pluginId, url, bundle, source],
   );
 
   const handleLoad = useCallback(() => {

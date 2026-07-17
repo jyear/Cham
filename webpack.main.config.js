@@ -1,10 +1,9 @@
-require('./scripts/load-env')('.env.dev');
-
 const path = require('path');
 const webpack = require('webpack');
 
 module.exports = (_env, argv) => {
   const isProd = argv.mode === 'production';
+  require('./scripts/load-env')(isProd ? '.env.prod' : '.env.dev');
 
   return {
     mode: isProd ? 'production' : 'development',

@@ -69,7 +69,13 @@ export const BRIDGE_SOURCE = String.raw`
         return createProxy(nextPath);
       },
       apply: function(target, thisArg, args) {
-        return sendCall(path.join('.'), args);
+        var fullMethod = path.join('.');
+        // Auto-prefix: plugin.call('channel', ...) → plugin.call(pluginId, 'channel', ...)
+        if (fullMethod === 'plugin.call' && args.length < 3) {
+          var pid = window.__CHAM_PLUGIN_ID__;
+          if (pid) args = [pid].concat(args);
+        }
+        return sendCall(fullMethod, args);
       }
     });
   }

@@ -96,7 +96,18 @@ function createProxy(path: string[]): any {
     },
 
     apply(_target, _thisArg, args) {
-      return sendCall(path.join('.'), args);
+      const fullMethod = path.join('.');
+
+      // Auto-prefix: plugin.call('channel', ...args) → plugin.call(pluginId, 'channel', ...args)
+      // 1-2 args → auto-prefix; 3+ args → first arg is explicit target pluginId
+      if (fullMethod === 'plugin.call' && args.length < 3) {
+        const pluginId = (window as any).__CHAM_PLUGIN_ID__;
+        if (pluginId) {
+          args = [pluginId, ...args];
+        }
+      }
+
+      return sendCall(fullMethod, args);
     },
   });
 }

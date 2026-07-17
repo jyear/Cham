@@ -217,6 +217,9 @@ contextBridge.exposeInMainWorld('cham', {
     setItem: (pluginId: string, key: string, value: string) => ipcRenderer.invoke('plugin:setItem', pluginId, key, value),
     removeItem: (pluginId: string, key: string) => ipcRenderer.invoke('plugin:removeItem', pluginId, key),
     listItems: (pluginId: string) => ipcRenderer.invoke('plugin:listItems', pluginId),
+    // Auto-prefix is handled by the iframe bridge (bridge.ts).
+    // The preload receives fully-qualified 3-arg calls from the bridge,
+    // or direct 3-arg calls from builtin plugins in the main window.
     call: (pluginId: string, channel: string, ...args: any[]) =>
       ipcRenderer.invoke(`plugin:${pluginId}:${channel}`, ...args),
     isActive: (pluginId: string) => ipcRenderer.invoke('plugin:isActive', pluginId),

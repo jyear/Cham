@@ -13,7 +13,7 @@ export function SettingsModal({ open, onClose, t }: SettingsModalProps) {
 
   useEffect(() => {
     if (!open || !window.cham) return;
-    window.cham.plugin.call('bing-gallery', 'get-settings').then((result: any) => {
+    window.cham.plugin.call( 'get-settings').then((result: any) => {
       if (result?.success && result.settings) {
         setDownloadPath(result.settings.download_path || '');
       }
@@ -24,7 +24,7 @@ export function SettingsModal({ open, onClose, t }: SettingsModalProps) {
 
   const savePath = async (path: string) => {
     if (!window.cham) return;
-    await window.cham.plugin.call('bing-gallery', 'save-setting', {
+    await window.cham.plugin.call( 'save-setting', {
       key: 'download_path',
       value: path,
     });
@@ -34,7 +34,7 @@ export function SettingsModal({ open, onClose, t }: SettingsModalProps) {
     if (!window.cham || selecting) return;
     setSelecting(true);
     try {
-      const result = await window.cham.plugin.call('bing-gallery', 'select-folder');
+      const result = await window.cham.plugin.call( 'select-folder');
       if (result?.success && result.path) {
         setDownloadPath(result.path);
         await savePath(result.path);

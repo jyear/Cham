@@ -28,7 +28,7 @@ export function ImageViewer({ image, onClose, onDownload, onSetAppBackground, on
 
     let cancelled = false;
     if (window.cham) {
-      window.cham.plugin.call('bing-gallery', 'read-local-image', { filePath: image.localPath })
+      window.cham.plugin.call( 'read-local-image', { filePath: image.localPath })
         .then((result) => {
           if (!cancelled && result?.success && result.dataUrl) {
             setLocalSrc(result.dataUrl);

@@ -46,7 +46,7 @@ function BingGallery() {
     if (!window.cham) return;
     Promise.all([
       window.cham.loadSettings(),
-      window.cham.plugin.call("bing-gallery", "get-settings"),
+      window.cham.plugin.call( "get-settings"),
     ]).then(([, settingResult]: any) => {
       if (settingResult?.success && settingResult.settings) {
         downloadPathRef.current = settingResult.settings.download_path || "";
@@ -104,7 +104,6 @@ function BingGallery() {
 
     try {
       const result = await window.cham.plugin.call(
-        "bing-gallery",
         "fetch-images",
         { idx, n: 20 },
       );
@@ -175,7 +174,6 @@ function BingGallery() {
     if (!window.cham) return;
     try {
       const result = await window.cham.plugin.call(
-        "bing-gallery",
         "list-favorites",
       );
       if (result.success) {
@@ -194,7 +192,6 @@ function BingGallery() {
     setDownloadsLoading(true);
     try {
       const result = await window.cham.plugin.call(
-        "bing-gallery",
         "list-downloads",
       );
       if (result.success) {
@@ -213,7 +210,6 @@ function BingGallery() {
     // Refresh download path from settings
     try {
       const settingResult = await window.cham.plugin.call(
-        "bing-gallery",
         "get-settings",
       );
       if (settingResult?.success && settingResult.settings) {
@@ -232,7 +228,6 @@ function BingGallery() {
 
     try {
       const result = await window.cham.plugin.call(
-        "bing-gallery",
         "download-image",
         {
           imageUrl:
@@ -306,7 +301,6 @@ function BingGallery() {
     if (!window.cham) return;
     try {
       const wpResult = await window.cham.plugin.call(
-        "bing-gallery",
         "wallpaper:set",
         filePath,
       );
@@ -330,7 +324,6 @@ function BingGallery() {
       // Download locally first so we have a file path for wallpaper:set
       const fileName = `bing-wallpaper-${Date.now()}.jpg`;
       const dlResult = await window.cham.plugin.call(
-        "bing-gallery",
         "download-image",
         {
           imageUrl: imgUrl,
@@ -345,7 +338,6 @@ function BingGallery() {
       if (dlResult?.success && dlResult.path) {
         // Set as system desktop wallpaper
         await window.cham.plugin.call(
-          "bing-gallery",
           "wallpaper:set",
           dlResult.path,
         );
@@ -367,7 +359,7 @@ function BingGallery() {
 
     try {
       if (isFav) {
-        await window.cham.plugin.call("bing-gallery", "remove-favorite", {
+        await window.cham.plugin.call( "remove-favorite", {
           imageUrl: imgUrl,
         });
         setFavoriteUrls((prev) => {
@@ -377,7 +369,7 @@ function BingGallery() {
         });
         showToast(t.unfavorited);
       } else {
-        await window.cham.plugin.call("bing-gallery", "add-favorite", {
+        await window.cham.plugin.call( "add-favorite", {
           imageUrl: imgUrl,
           copyright: image.copyright || "",
           title: "title" in image ? image.title : "",
@@ -397,7 +389,7 @@ function BingGallery() {
   async function handleDeleteRecord(record: DownloadRecord) {
     if (!window.cham) return;
     try {
-      await window.cham.plugin.call("bing-gallery", "delete-download", {
+      await window.cham.plugin.call( "delete-download", {
         id: record.id,
       });
       loadDownloadRecords();
@@ -490,7 +482,7 @@ function BingGallery() {
         onClose={() => {
           setSettingsOpen(false);
           // Reload settings after close
-          window.cham?.plugin.call("bing-gallery", "get-settings").then((result: any) => {
+          window.cham?.plugin.call( "get-settings").then((result: any) => {
             if (result?.success && result.settings) {
               downloadPathRef.current = result.settings.download_path || "";
             }
