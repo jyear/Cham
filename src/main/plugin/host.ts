@@ -9,6 +9,8 @@ import { getDb } from '../db/connection';
 import type { PluginManifest, PluginMainApi, PluginMainModule } from '../../shared/plugin/types';
 import { buildTableSQL } from '../../shared/plugin/types';
 import { httpGet, downloadFile } from '../utils/http';
+import { insertManifest } from '../db/plugins';
+import { getPluginsDir, extractBinaryFiles } from './installer';
 
 // Lazy-load sharp (native module — may not be available in all environments)
 let _sharp: any = null;
@@ -84,8 +86,47 @@ class PluginHost {
       }
     }
 
-    // 2. Activate store plugins from DB
     const db = getDb();
+
+    // 2. Auto-discover .asar files in plugins dir (register if not in DB)
+    try {
+      const pluginsDir = getPluginsDir();
+      if (fs.existsSync(pluginsDir)) {
+        const entries = fs.readdirSync(pluginsDir);
+        for (const entry of entries) {
+          if (!entry.endsWith('.asar')) continue;
+          const asarPath = path.join(pluginsDir, entry);
+          try {
+            const manifestRaw = fs.readFileSync(path.join(asarPath, 'manifest.json'), 'utf-8');
+            const manifest: PluginManifest = JSON.parse(manifestRaw);
+            // Check if already registered
+            const existing = db
+              .prepare('SELECT plugin_id FROM plugin_manifests WHERE plugin_id = ?')
+              .get(manifest.id);
+            if (!existing) {
+              console.log(`[PluginHost] Auto-registering .asar: ${entry}`);
+              // Create tables if declared
+              if (manifest.dbTables && manifest.dbTables.length > 0) {
+                for (const sql of buildTableSQL(manifest.dbTables)) {
+                  db.exec(sql);
+                }
+              }
+              insertManifest(manifest.id, manifest, asarPath, manifest.version);
+              // Extract binary files
+              if (manifest.binaryFiles && manifest.binaryFiles.length > 0) {
+                extractBinaryFiles(asarPath, manifest.id, manifest.binaryFiles);
+              }
+            }
+          } catch (err: any) {
+            console.warn(`[PluginHost] Failed to auto-register ${entry}: ${err.message}`);
+          }
+        }
+      }
+    } catch (err: any) {
+      console.warn(`[PluginHost] .asar scan error: ${err.message}`);
+    }
+
+    // 3. Activate store plugins from DB
     const rows = db
       .prepare('SELECT plugin_id, manifest, install_path FROM plugin_manifests')
       .all() as Array<{ plugin_id: string; manifest: string; install_path: string }>;
@@ -329,6 +370,14 @@ class PluginHost {
   private buildApi(manifest: PluginManifest, pluginDir: string): PluginMainApi {
     const { id: pluginId } = manifest;
 
+    // Companion data directory for writable files & executable binaries.
+    // When pluginDir is an .asar archive, writes and exec must go to a
+    // sibling folder (e.g. "plugins/foo.asar" → "plugins/foo/").
+    // Falls back to pluginDir when the plugin is installed as a plain folder.
+    const pluginDataDir = pluginDir.endsWith('.asar')
+      ? pluginDir.replace(/\.asar$/, '')
+      : pluginDir;
+
     // Build the set of allowed table names
     const allowedTables = new Set<string>([
       'plugin_store', // KV store is always allowed
@@ -460,7 +509,7 @@ class PluginHost {
           },
           download: async (url: string, destRelativePath: string) => {
             if (!/^https?:\/\//i.test(url)) throw new Error('Only http/https URLs are allowed');
-            const dest = PluginHost.resolveSafe(pluginDir, destRelativePath);
+            const dest = PluginHost.resolveSafe(pluginDataDir, destRelativePath);
             await downloadFile(url, dest);
           },
           downloadTo: async (url: string, absolutePath: string) => {
@@ -536,9 +585,18 @@ class PluginHost {
         child_process: {
           execFile: (relativeExePath: string, args: string[] = [], options?: { timeout?: number }) =>
             new Promise((resolve, reject) => {
-              const exePath = PluginHost.resolveSafe(pluginDir, relativeExePath);
-              if (!fs.existsSync(exePath)) {
-                return reject(new Error(`Executable not found: ${relativeExePath}`));
+              // Try data dir first (where binaries live when plugin is .asar),
+              // then fall back to plugin dir (plain folder installs).
+              const tryDirs = pluginDataDir !== pluginDir
+                ? [pluginDataDir, pluginDir]
+                : [pluginDir];
+              let exePath = '';
+              for (const base of tryDirs) {
+                const p = PluginHost.resolveSafe(base, relativeExePath);
+                if (fs.existsSync(p)) { exePath = p; break; }
+              }
+              if (!exePath) {
+                return reject(new Error(`Executable not found: ${relativeExePath} (searched: ${tryDirs.join(', ')})`));
               }
               const child = spawn(exePath, args, {
                 shell: false,

@@ -11,7 +11,7 @@
       "updatedAt": "2026-07-17T00:00:00Z",
       "minAppVersion": "0.0.2",
       "manifestUrl": "https://cham-download.oss-cn-beijing.aliyuncs.com/store/plugins/bing-gallery/manifest.json",
-      "downloadUrl": "https://cham-download.oss-cn-beijing.aliyuncs.com/store/plugins/bing-gallery/renderer.js"
+      "downloadUrl": "https://cham-download.oss-cn-beijing.aliyuncs.com/store/plugins/bing-gallery/bing-gallery.asar"
     }
   ],
   "updatedAt": "2026-07-17T00:00:00Z"

@@ -101,12 +101,59 @@ export async function installPlugin(
   onProgress?: (pct: number, pluginId: string) => void,
 ): Promise<PluginManifest> {
   const manifest = await fetchManifest(manifestUrl);
-  const pluginDir = getPluginDir(manifest.id);
 
-  // Resolve bundle URLs relative to the manifest URL (handles query params correctly)
+  // Resolve URLs relative to the manifest URL
   const baseUrl = manifestUrl.replace(/\/[^\/]*$/, '/');
 
-  // Build the list of files to download
+  // ── ASAR bundle install ──
+  if (manifest.asarBundle) {
+    const asarPath = path.join(getPluginsDir(), manifest.asarBundle);
+    const asarUrl = new URL(manifest.asarBundle, baseUrl).href;
+
+    // Clean up any previous folder-based install of the same plugin
+    const legacyDir = getPluginDir(manifest.id);
+    if (fs.existsSync(legacyDir)) {
+      try { fs.rmSync(legacyDir, { recursive: true, force: true }); } catch {}
+    }
+
+    try {
+      await downloadFile(asarUrl, asarPath, (pct) => {
+        if (onProgress) onProgress(pct, manifest.id);
+      });
+      if (onProgress) onProgress(100, manifest.id);
+
+      // Register in DB — install_path is the .asar file
+      insertManifest(manifest.id, manifest, asarPath, manifest.version);
+
+      // Extract binary files from .asar → companion folder
+      if (manifest.binaryFiles && manifest.binaryFiles.length > 0) {
+        extractBinaryFiles(asarPath, manifest.id, manifest.binaryFiles);
+      }
+
+      // Create tables
+      if (manifest.dbTables && manifest.dbTables.length > 0) {
+        createPluginTables(manifest.id, manifest.dbTables);
+      }
+
+      // Activate main module (loaded from inside .asar)
+      if (manifest.main) {
+        try {
+          await pluginHost.activate(manifest, asarPath);
+        } catch (err: any) {
+          console.warn(`[plugin] Failed to activate main module for "${manifest.id}": ${err.message}`);
+        }
+      }
+
+      console.log(`[plugin] Installed ${manifest.id} v${manifest.version} (asar)`);
+      return manifest;
+    } catch (err) {
+      try { fs.unlinkSync(asarPath); } catch {}
+      throw err;
+    }
+  }
+
+  // ── Legacy: individual file install ──
+  const pluginDir = getPluginDir(manifest.id);
   const downloads: Array<{ url: string; dest: string }> = [];
 
   const bundleUrl = new URL(manifest.entry, baseUrl).href;
@@ -134,25 +181,20 @@ export async function installPlugin(
     for (let i = 0; i < total; i++) {
       const { url, dest } = downloads[i];
       await downloadFile(url, dest, (filePct) => {
-        // Aggregate progress: each file contributes 100/total percent
         if (onProgress) {
           const aggregate = Math.round((i * 100 + filePct) / total);
           onProgress(aggregate, manifest.id);
         }
       });
     }
-    // Ensure 100% is reported
     if (onProgress) onProgress(100, manifest.id);
 
-    // Create tables and register in DB — only after all downloads succeed
     if (manifest.dbTables && manifest.dbTables.length > 0) {
       createPluginTables(manifest.id, manifest.dbTables);
     }
 
-    // Register in the database
     insertManifest(manifest.id, manifest, pluginDir, manifest.version);
 
-    // Activate the main module immediately so IPC handlers work right away
     if (manifest.main) {
       try {
         await pluginHost.activate(manifest, pluginDir);
@@ -164,7 +206,6 @@ export async function installPlugin(
     console.log(`[plugin] Installed ${manifest.id} v${manifest.version}`);
     return manifest;
   } catch (err) {
-    // Clean up on failure: remove partially downloaded files
     try { fs.rmSync(pluginDir, { recursive: true, force: true }); } catch {}
     throw err;
   }
@@ -205,6 +246,50 @@ export async function uninstallPlugin(pluginId: string): Promise<void> {
   // Remove from registry
   deleteManifest(pluginId);
   console.log(`[plugin] Uninstalled ${pluginId}`);
+}
+
+/**
+ * Extract binaryFiles (declared in manifest) from inside an .asar archive
+ * to the companion folder. ASAR is read-only, so executables and other
+ * binary assets must live in a writable sibling directory.
+ *
+ * Idempotent — skips files that already exist at the destination.
+ *
+ * @param asarPath   Absolute path to the .asar file
+ * @param pluginId   Plugin ID, used to derive the companion folder name
+ * @param binaryFiles Relative paths inside the .asar to extract
+ */
+export function extractBinaryFiles(
+  asarPath: string,
+  pluginId: string,
+  binaryFiles: string[],
+): void {
+  if (!asarPath.endsWith('.asar')) return; // Not an .asar install — nothing to extract
+
+  // Companion folder: "plugins/foo.asar" → "plugins/foo/"
+  const companionDir = asarPath.replace(/\.asar$/, '');
+
+  for (const relPath of binaryFiles) {
+    const srcPath = path.join(asarPath, relPath);
+    const destPath = path.join(companionDir, relPath);
+
+    try {
+      if (!fs.existsSync(srcPath)) {
+        console.warn(`[plugin] binaryFile not found in .asar: ${relPath}`);
+        continue;
+      }
+      if (fs.existsSync(destPath)) {
+        console.log(`[plugin] binaryFile already extracted: ${relPath}`);
+        continue;
+      }
+      const destDir = path.dirname(destPath);
+      if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
+      fs.copyFileSync(srcPath, destPath);
+      console.log(`[plugin] Extracted binary: ${relPath} → ${destPath}`);
+    } catch (err: any) {
+      console.error(`[plugin] Failed to extract binary "${relPath}": ${err.message}`);
+    }
+  }
 }
 
 /**

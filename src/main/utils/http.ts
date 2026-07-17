@@ -1,7 +1,7 @@
 /**
  * Shared HTTP helpers — used by update checking and plugin installer.
  */
-import * as fs from 'fs';
+import * as originalFs from 'original-fs';
 import * as path from 'path';
 import * as https from 'https';
 
@@ -33,27 +33,36 @@ export function httpGet(url: string, redirects = 0): Promise<string> {
   });
 }
 
-/** Download a file to disk, with redirect limit, timeout, and progress */
+/** Download a file to disk (binary-safe, same mechanism as httpGet) */
 export function downloadFile(url: string, dest: string, onProgress?: (pct: number) => void, redirects = 0): Promise<void> {
   return new Promise((resolve, reject) => {
-    if (redirects > MAX_REDIRECTS) {
-      return reject(new Error('Too many redirects'));
-    }
+    if (redirects > MAX_REDIRECTS) return reject(new Error('Too many redirects'));
+
     const dir = path.dirname(dest);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    if (!originalFs.existsSync(dir)) originalFs.mkdirSync(dir, { recursive: true });
 
     const req = https.get(url, { timeout: TIMEOUT_MS }, (res) => {
       if (REDIRECT_CODES.has(res.statusCode || 0) && res.headers.location) {
         downloadFile(res.headers.location, dest, onProgress, redirects + 1).then(resolve, reject);
         return;
       }
+      if (res.statusCode !== 200) {
+        req.destroy();
+        return reject(new Error(`HTTP ${res.statusCode}`));
+      }
       const total = parseInt(res.headers['content-length'] || '0', 10);
+      const chunks: Buffer[] = [];
       let downloaded = 0;
-      const file = fs.createWriteStream(dest);
-      file.on('error', reject);
-      res.on('data', (chunk) => { downloaded += chunk.length; if (total > 0 && onProgress) onProgress(Math.round((downloaded / total) * 100)); });
-      res.pipe(file);
-      file.on('finish', () => { file.close(); resolve(); });
+      res.on('data', (chunk: Buffer) => {
+        chunks.push(chunk);
+        downloaded += chunk.length;
+        if (total > 0 && onProgress) onProgress(Math.round((downloaded / total) * 100));
+      });
+      res.on('end', () => {
+        originalFs.writeFileSync(dest, Buffer.concat(chunks));
+        resolve();
+      });
+      res.on('error', reject);
     });
     req.on('timeout', () => { req.destroy(); reject(new Error('Request timeout')); });
     req.on('error', reject);

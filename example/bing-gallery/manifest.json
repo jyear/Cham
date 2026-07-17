@@ -9,11 +9,14 @@
   "minHeight": 600,
   "category": "store",
   "permissions": ["fs", "storage"],
+  "asarBundle": "bing-gallery.asar",
   "entry": "renderer.js",
   "main": "main.js",
   "files": [
     "i18n/en.json",
-    "i18n/zh.json",
+    "i18n/zh.json"
+  ],
+  "binaryFiles": [
     "dependence/windows-wallpaper-x86-64.exe"
   ],
   "devServer": "http://localhost:3001",

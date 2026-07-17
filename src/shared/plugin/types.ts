@@ -89,6 +89,18 @@ export interface PluginManifest {
      Relative paths to extra files that should be downloaded during
      store installation (e.g. i18n, binaries, assets). */
   files?: string[];
+
+  /* ── Binary Files (optional) ──
+     Relative paths to binary/executable files inside the .asar that
+     must be extracted to the companion folder on install.
+     These files cannot execute from inside the .asar archive. */
+  binaryFiles?: string[];
+
+  /* ── ASAR Bundle (optional) ──
+     If present, the installer downloads this .asar file instead of
+     individual entry/main/files. The .asar contains all plugin code.
+     entry/main paths are relative to the root of the .asar archive. */
+  asarBundle?: string;
 }
 
 /**

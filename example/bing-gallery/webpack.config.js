@@ -91,6 +91,9 @@ module.exports = [
   }},
         { from: 'i18n/en.json', to: 'dist/i18n/en.json' },
         { from: 'i18n/zh.json', to: 'dist/i18n/zh.json' },
+        // Binary is copied to dist/ for local dev (needed by child_process.execFile).
+        // In production .asar packaging, it goes inside the .asar and is extracted
+        // to the companion folder on install (see scripts/package.js + installer.ts).
         { from: 'node_modules/wallpaper/source/windows-wallpaper-x86-64.exe', to: 'dist/dependence/windows-wallpaper-x86-64.exe' },
       ]),
     ],
