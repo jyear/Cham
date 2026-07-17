@@ -50,6 +50,7 @@ module.exports = (_env, argv) => {
       sharp: 'commonjs sharp',
       'better-sqlite3': 'commonjs better-sqlite3',
       chokidar: 'commonjs chokidar',
+      'original-fs': 'commonjs original-fs',
     },
     node: {
       __dirname: false,
