@@ -61,10 +61,15 @@ export default function Store() {
   useEffect(() => {
     setStoreLoading(true);
     setStoreError(null);
+    console.log('[Store] fetching:', STORE_INDEX_URL);
     fetch(STORE_INDEX_URL)
       .then((r) => r.json())
-      .then((data) => setStoreIndex(data as StoreIndex))
+      .then((data) => {
+        console.log('[Store] storeIndex loaded:', data);
+        setStoreIndex(data as StoreIndex);
+      })
       .catch((err) => {
+        console.error('[Store] fetch error:', err);
         setStoreError(err.message || 'Failed to load store');
       })
       .finally(() => setStoreLoading(false));
@@ -109,18 +114,25 @@ export default function Store() {
     for (const b of bundles) {
       map.set(b.manifest.id, b.manifest.version);
     }
+    console.log('[Store] installedVersionMap:', [...map.entries()]);
     return map;
   }, [bundles]);
 
   const installedIds = useMemo(() => new Set(bundles.map((b) => b.manifest.id)), [bundles]);
 
   const updateAvailable = useMemo(() => {
-    if (!storeIndex) return [];
-    return storeIndex.plugins.filter((entry) => {
+    if (!storeIndex) {
+      console.log('[Store] updateAvailable: storeIndex is null');
+      return [];
+    }
+    const result = storeIndex.plugins.filter((entry) => {
       const inst = installedVersionMap.get(entry.id);
+      console.log(`[Store] checking "${entry.id}": remote=${entry.version} local=${inst} cmp=${inst ? compareVersions(entry.version, inst) : 'N/A'}`);
       if (!inst) return false;
       return compareVersions(entry.version, inst) > 0;
     });
+    console.log('[Store] updateAvailable result:', result.map(e => e.id));
+    return result;
   }, [storeIndex, installedVersionMap]);
 
   const displayedPlugins = useMemo(() => {
