@@ -1,5 +1,13 @@
 [
   {
+    "version": "0.0.3",
+    "files": {
+      "win": "Cham-Setup-0.0.3.exe"
+    },
+    "notes": "- Store plugin installer supports additional files (i18n, binaries, assets)\n- Bing Gallery available on Store for one-click install\n- Production build uses .env.prod configuration\n\n- 商店插件安装器支持下载额外文件（翻译、二进制、资源）\n- 必应好图上架商店，一键安装\n- 生产构建使用 .env.prod 配置",
+    "timestamp": 1752854400000
+  },
+  {
     "version": "0.0.2",
     "files": {
       "win": "Cham-Setup-0.0.2.exe"

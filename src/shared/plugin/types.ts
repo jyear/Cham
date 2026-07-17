@@ -84,6 +84,11 @@ export interface PluginManifest {
      default export as a function, injecting the PluginMainApi.
      Use this when a plugin needs Node.js native capabilities. */
   main?: string;
+
+  /* ── Additional Files (optional) ──
+     Relative paths to extra files that should be downloaded during
+     store installation (e.g. i18n, binaries, assets). */
+  files?: string[];
 }
 
 /**

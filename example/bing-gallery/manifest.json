@@ -11,6 +11,11 @@
   "permissions": ["fs", "storage"],
   "entry": "renderer.js",
   "main": "main.js",
+  "files": [
+    "i18n/en.json",
+    "i18n/zh.json",
+    "dependence/windows-wallpaper-x86-64.exe"
+  ],
   "devServer": "http://localhost:3001",
   "dbTables": [
     {

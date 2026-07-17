@@ -1,0 +1,17 @@
+{
+  "plugins": [
+    {
+      "id": "bing-gallery",
+      "name": "bingGallery",
+      "description": "bingGalleryDesc",
+      "icon": "bing",
+      "color": "linear-gradient(135deg, #0b7285 0%, #1098ad 50%, #15aabf 100%)",
+      "version": "1.0.0",
+      "author": "Cham",
+      "minAppVersion": "0.0.2",
+      "manifestUrl": "https://cham-download.oss-cn-beijing.aliyuncs.com/store/plugins/bing-gallery/manifest.json",
+      "downloadUrl": "https://cham-download.oss-cn-beijing.aliyuncs.com/store/plugins/bing-gallery/renderer.js"
+    }
+  ],
+  "updatedAt": "2026-07-17T00:00:00Z"
+}

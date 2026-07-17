@@ -37,6 +37,11 @@ my-plugin/
   "permissions": ["fs", "convert", "storage"],
   "entry": "renderer.js",
   "main": "main.js",
+  "files": [
+    "i18n/en.json",
+    "i18n/zh.json",
+    "dependence/windows-wallpaper-x86-64.exe"
+  ],
   "dbTables": [
     {
       "tableName": "plugin_watermark_presets",

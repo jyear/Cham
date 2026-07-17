@@ -111,18 +111,35 @@ export async function installPlugin(manifestUrl: string): Promise<PluginManifest
       await downloadFile(mainUrl, path.join(pluginDir, manifest.main));
     }
 
+    // Download additional files (i18n, binaries, assets, etc.)
+    if (manifest.files) {
+      for (const file of manifest.files) {
+        const fileUrl = new URL(file, baseUrl).href;
+        const fileDest = path.join(pluginDir, file);
+        // Ensure parent directory exists
+        const fileDir = path.dirname(fileDest);
+        if (!fs.existsSync(fileDir)) {
+          fs.mkdirSync(fileDir, { recursive: true });
+        }
+        await downloadFile(fileUrl, fileDest);
+      }
+    }
+
     // Create tables and register in DB — only after all downloads succeed
     if (manifest.dbTables && manifest.dbTables.length > 0) {
       createPluginTables(manifest.id, manifest.dbTables);
     }
 
-    // Register in the database.
-    // NOTE: We do NOT activate the main module here — hooks only become
-    // active on next app startup via pluginHost.start().
+    // Register in the database
     insertManifest(manifest.id, manifest, pluginDir, manifest.version);
 
+    // Activate the main module immediately so IPC handlers work right away
     if (manifest.main) {
-      console.log(`[plugin] ${manifest.id} has a main module — will activate on next restart`);
+      try {
+        await pluginHost.activate(manifest, pluginDir);
+      } catch (err: any) {
+        console.warn(`[plugin] Failed to activate main module for "${manifest.id}": ${err.message}`);
+      }
     }
 
     console.log(`[plugin] Installed ${manifest.id} v${manifest.version}`);
