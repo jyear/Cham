@@ -25,6 +25,31 @@ module.exports = function bingGalleryMain(api) {
     api.log.warn('Failed to create settings table: ' + e.message);
   }
 
+  // ── Helpers ──
+
+  /** Return the writable plugin data directory.
+   *  For .asar installs, api.pluginDir points to the .asar file; the actual
+   *  writable companion folder is pluginDir without the .asar extension. */
+  function getDataDir() {
+    var dir = api.pluginDir;
+    if (dir.slice(-5) === '.asar') {
+      dir = dir.slice(0, -5);
+    }
+    return dir;
+  }
+
+  /** Fix paths that were incorrectly stored pointing inside the .asar archive.
+   *  Old versions of this plugin computed local_path as:
+   *    join(pluginDir, ...)  →  ".../bing-gallery.asar/downloads/..."
+   *  The actual files live in the companion folder:
+   *    ".../bing-gallery/downloads/..."
+   *  This corrects those stale records transparently. */
+  function fixPath(filePath) {
+    if (!filePath) return filePath;
+    // Match ".asar\" or ".asar/" and replace with just the separator
+    return filePath.replace(/\.asar([\\/])/g, '$1');
+  }
+
   // ── Fetch Bing Images ──
   api.registerHandler('fetch-images', function (_event, params) {
     var idx = (params && params.idx) || 0;
@@ -100,6 +125,8 @@ module.exports = function bingGalleryMain(api) {
 
       // Save download record helper
       function saveRecord(absPath, fileName) {
+        // skipRecord: true — used by wallpaper setting to avoid polluting download history
+        if (params.skipRecord) return;
         try {
           api.db.prepare(
             'INSERT INTO plugin_bing_downloads (image_url, full_url, copyright, title, hash, local_path, file_name) VALUES (?, ?, ?, ?, ?, ?, ?)'
@@ -129,13 +156,13 @@ module.exports = function bingGalleryMain(api) {
           return { success: false, error: 'Download failed: ' + (err && err.message ? err.message : String(err)) };
         });
       } else {
-        // Fallback: download to plugin directory
+        // Fallback: download to plugin data directory (companion folder for .asar installs)
         var destPath = 'downloads/' + params.fileName;
+        var absFallbackPath = api.native.path.join(getDataDir(), destPath);
         return api.native.http.download(params.imageUrl, destPath).then(function () {
           api.log.info('Downloaded: ' + params.fileName + ' to plugin downloads/');
-          var absFallbackPath = api.native.path.join(api.pluginDir, destPath);
           saveRecord(absFallbackPath, params.fileName);
-          return { success: true, path: destPath };
+          return { success: true, path: absFallbackPath };
         }).catch(function (err) {
           api.log.error('Download failed: ' + (err && err.message ? err.message : String(err)));
           return { success: false, error: 'Download failed: ' + (err && err.message ? err.message : String(err)) };
@@ -238,7 +265,7 @@ module.exports = function bingGalleryMain(api) {
             copyright: row.copyright,
             title: row.title,
             hash: row.hash,
-            localPath: row.local_path,
+            localPath: fixPath(row.local_path),
             fileName: row.file_name,
             downloadedAt: row.downloaded_at,
           };
@@ -252,7 +279,7 @@ module.exports = function bingGalleryMain(api) {
   // ── Open Folder (reveal file in system file manager) ──
   api.registerHandler('open-folder', function (_event, params) {
     try {
-      api.native.shell.showItemInFolder(params.filePath);
+      api.native.shell.showItemInFolder(fixPath(params.filePath));
       return { success: true };
     } catch (error) {
       return { success: false, error: error.message };
@@ -262,7 +289,9 @@ module.exports = function bingGalleryMain(api) {
   // ── Read Local Image (for thumbnails) ──
   api.registerHandler('read-local-image', function (_event, params) {
     try {
-      var dataUrl = api.native.readImage(params.filePath);
+      // Fix old records that had paths pointing inside the .asar archive
+      var filePath = fixPath(params.filePath);
+      var dataUrl = api.native.readImage(filePath);
       return { success: true, dataUrl: dataUrl };
     } catch (error) {
       return { success: false, error: error.message };
@@ -310,8 +339,18 @@ module.exports = function bingGalleryMain(api) {
   }
 
   api.registerHandler('wallpaper:set', function (_event, filePath) {
-    return setWallpaperBinary(filePath).then(function () {
-      api.log.info('Wallpaper set: ' + filePath);
+    // Resolve relative paths against the plugin data directory (companion folder
+    // for .asar installs). The download-image handler now returns absolute paths,
+    // but this guard ensures wallpaper:set still works with relative paths too.
+    var absPath = filePath;
+    // On Windows, absolute paths start with a drive letter (e.g. "C:\") or UNC ("\\").
+    var isAbsolute = /^[A-Za-z]:[\\/]/.test(filePath) || /^\\\\/.test(filePath);
+    if (!isAbsolute) {
+      absPath = api.native.path.join(getDataDir(), filePath);
+      api.log.info('Resolved wallpaper path: ' + filePath + ' → ' + absPath);
+    }
+    return setWallpaperBinary(absPath).then(function () {
+      api.log.info('Wallpaper set: ' + absPath);
       return { success: true };
     }).catch(function (err) {
       api.log.error('Wallpaper set error: ' + (err && err.message ? err.message : String(err)));

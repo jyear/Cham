@@ -332,6 +332,7 @@ function BingGallery() {
           title: image.title || "",
           hash: "hash" in image ? (image as BingImage).hash : "",
           fileName,
+          skipRecord: true,  // wallpaper downloads are temporary, don't show in history
         },
       );
 

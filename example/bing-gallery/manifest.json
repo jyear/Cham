@@ -1,7 +1,7 @@
 {
   "id": "bing-gallery",
   "name": "bingGallery",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "bingGalleryDesc",
   "icon": "bing",
   "color": "linear-gradient(135deg, #0b7285 0%, #1098ad 50%, #15aabf 100%)",

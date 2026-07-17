@@ -1,6 +1,6 @@
 {
   "name": "bing-gallery",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Bing Image Gallery - Browse Bing daily wallpapers",
   "private": true,
   "scripts": {

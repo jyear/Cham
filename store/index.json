@@ -6,7 +6,7 @@
       "description": "bingGalleryDesc",
       "icon": "bing",
       "color": "linear-gradient(135deg, #0b7285 0%, #1098ad 50%, #15aabf 100%)",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "author": "Cham",
       "updatedAt": "2026-07-17T00:00:00Z",
       "minAppVersion": "0.0.2",
