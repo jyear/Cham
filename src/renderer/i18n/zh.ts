@@ -7,6 +7,8 @@ const zh = {
   source: '源文件',
   filesCount: (n: number) => `${n} 个文件`,
   noFilesSelected: '未选择文件',
+  dropFilesHint: '将文件或文件夹拖到这里',
+  removeFile: '移除文件',
   addFolder: '添加文件夹',
   addFiles: '添加文件...',
   clearAll: '清空',

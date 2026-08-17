@@ -51,6 +51,7 @@ export interface ChamAPI {
   // File
   selectFiles: () => Promise<FileInfo[]>;
   selectFolder: () => Promise<FolderResult>;
+  resolveDroppedPaths: (paths: string[]) => Promise<FolderResult>;
   selectOutputDir: () => Promise<string | null>;
   getFileHash: (filePath: string) => Promise<{ success: boolean; hash?: string; error?: string }>;
   readImage: (filePath: string) => Promise<{ success: boolean; dataUrl?: string; error?: string }>;
@@ -129,6 +130,7 @@ contextBridge.exposeInMainWorld('cham', {
   // File / Conversion
   selectFiles: () => ipcRenderer.invoke('select-files'),
   selectFolder: () => ipcRenderer.invoke('select-folder'),
+  resolveDroppedPaths: (paths: string[]) => ipcRenderer.invoke('resolve-dropped-paths', paths),
   selectOutputDir: () => ipcRenderer.invoke('select-output-dir'),
   getFileHash: (filePath: string) => ipcRenderer.invoke('get-file-hash', filePath),
   readImage: (filePath: string) => ipcRenderer.invoke('read-image', filePath),

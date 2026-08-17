@@ -7,6 +7,8 @@ const en = {
   source: 'Source',
   filesCount: (n: number) => `${n} files`,
   noFilesSelected: 'No files selected',
+  dropFilesHint: 'Drop files or folders here',
+  removeFile: 'Remove file',
   addFolder: 'Add Folder',
   addFiles: 'Add Files...',
   clearAll: 'Clear All',

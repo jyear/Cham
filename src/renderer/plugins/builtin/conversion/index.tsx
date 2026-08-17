@@ -317,6 +317,20 @@ export default function Conversion() {
     }
   }, []);
 
+  const handleDropPaths = useCallback(async (paths: string[]) => {
+    if (!window.cham) return;
+    const result = await window.cham.resolveDroppedPaths(paths);
+    if (result.files.length === 0) return;
+
+    setFiles((prev) => {
+      const existing = new Set(prev.map((f) => f.path));
+      return [...prev, ...result.files.filter((f) => !existing.has(f.path))];
+    });
+    setConvertedItems([]);
+    setStatus('idle');
+    if (result.folderPath) setWatchFolder(result.folderPath);
+  }, []);
+
   const handleSelectOutputDir = useCallback(async () => {
     if (!window.cham) return;
     const dir = await window.cham.selectOutputDir();
@@ -376,6 +390,7 @@ export default function Conversion() {
         onClearFiles={handleClearFiles}
         onSelectFiles={handleSelectFiles}
         onSelectFolder={handleSelectFolder}
+        onDropPaths={handleDropPaths}
       />
 
       <ConfigPanel

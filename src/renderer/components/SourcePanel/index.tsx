@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import FileRow, { formatSize, type FileItem } from '@/components/FileRow';
 import Icon from '@/components/Icon';
 import { useT } from '@/i18n';
@@ -29,17 +29,52 @@ interface Props {
   onClearFiles: () => void;
   onSelectFiles: () => void;
   onSelectFolder: () => void;
+  onDropPaths: (paths: string[]) => void;
 }
 
 export default function SourcePanel({
   files, status, convertedItems,
   onRemoveFile, onClearFiles, onSelectFiles, onSelectFolder,
+  onDropPaths,
 }: Props) {
   const { t } = useT();
+  const [isDragOver, setIsDragOver] = useState(false);
   const totalSize = files.reduce((sum, f) => sum + f.size, 0);
 
+  const handleDragEnter = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'copy';
+  };
+
+  const handleDragLeave = (event: React.DragEvent<HTMLDivElement>) => {
+    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+      setIsDragOver(false);
+    }
+  };
+
+  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsDragOver(false);
+
+    const paths = Array.from(event.dataTransfer.files)
+      .map((file) => (file as File & { path?: string }).path)
+      .filter((filePath): filePath is string => !!filePath);
+    if (paths.length > 0) onDropPaths(paths);
+  };
+
   return (
-    <div className={s.panel}>
+    <div
+      className={`${s.panel} ${isDragOver ? s.dragOver : ''}`}
+      onDragEnter={handleDragEnter}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
       <div className={s.header}>
         <h3 className={s.title}>{t.source}</h3>
         {files.length > 0 && (
@@ -49,7 +84,11 @@ export default function SourcePanel({
 
       <div className={s.body}>
         {files.length === 0 ? (
-          <div className={s.empty}>{t.noFilesSelected}</div>
+          <div className={s.empty}>
+            <Icon type="folder" size={24} />
+            <span>{t.noFilesSelected}</span>
+            <span className={s.dropHint}>{t.dropFilesHint}</span>
+          </div>
         ) : (
           <div className={s.list}>
             {files.map((file) => {
@@ -68,7 +107,14 @@ export default function SourcePanel({
                     </span>
                   }
                   action={
-                    <button className={s.removeBtn} onClick={() => onRemoveFile(file.path)} title="×">×</button>
+                    <button
+                      className={s.removeBtn}
+                      onClick={() => onRemoveFile(file.path)}
+                      title={t.removeFile}
+                      aria-label={t.removeFile}
+                    >
+                      ×
+                    </button>
                   }
                 />
               );

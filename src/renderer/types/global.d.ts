@@ -48,6 +48,7 @@ declare global {
   interface ChamAPI {
     selectFiles: () => Promise<FileInfo[]>;
     selectFolder: () => Promise<FolderResult>;
+    resolveDroppedPaths: (paths: string[]) => Promise<FolderResult>;
     selectOutputDir: () => Promise<string | null>;
     getFileHash: (filePath: string) => Promise<{ success: boolean; hash?: string; error?: string }>;
     readImage: (filePath: string) => Promise<{ success: boolean; dataUrl?: string; error?: string }>;
